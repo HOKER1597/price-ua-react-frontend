@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import './CategoryList.css';
@@ -115,7 +115,7 @@ function CategoryList() {
   }, []);
 
   // Function to start or reset the hero carousel timer
-  const startHeroTimer = () => {
+  const startHeroTimer = useCallback(() => {
     if (heroIntervalRef.current) {
       clearInterval(heroIntervalRef.current);
     }
@@ -133,10 +133,10 @@ function CategoryList() {
         return nextSlide;
       });
     }, 4000);
-  };
+  }, []);
 
   // Function to start or reset the product carousel timer
-  const startProductTimer = () => {
+  const startProductTimer = useCallback(() => {
     if (productIntervalRef.current) {
       clearInterval(productIntervalRef.current);
     }
@@ -154,7 +154,7 @@ function CategoryList() {
         return nextSlide;
       });
     }, 4000);
-  };
+  }, [recommendedProducts.length]);
 
   // Start timers on mount
   useEffect(() => {
@@ -166,7 +166,7 @@ function CategoryList() {
       clearInterval(heroIntervalRef.current);
       clearInterval(productIntervalRef.current);
     };
-  }, [recommendedProducts.length]);
+  }, [recommendedProducts.length, startHeroTimer, startProductTimer]);
 
   // Handle manual navigation for hero carousel
   const goToHeroSlide = (index) => {
