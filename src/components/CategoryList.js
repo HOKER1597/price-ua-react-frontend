@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import './CategoryList.css';
 import { subcategoriesData } from './CategorySubcategories';
-
-// Images for the hero carousel
 import news1 from '../img/news1.avif';
 import news2 from '../img/news2.avif';
 import news3 from '../img/news3.avif';
@@ -15,16 +13,6 @@ import news7 from '../img/news7.avif';
 import news8 from '../img/news8.avif';
 import news9 from '../img/news9.avif';
 import news10 from '../img/news10.avif';
-
-// Company logos
-import evaLogo from '../img/logo_eva.svg';
-import prostorLogo from '../img/logo_prostor.png';
-import watsonsLogo from '../img/logo_watsons.jpg';
-import rozetkaLogo from '../img/logo_rozetka.png';
-import makeupLogo from '../img/logo_makeup.png';
-import parfumsLogo from '../img/logo_parfums.png';
-import auchanLogo from '../img/logo_auchan.png';
-import silpoLogo from '../img/logo_silpo.svg';
 
 const carouselImages = [
   { src: news1, alt: 'Шампуні - Акція' },
@@ -39,22 +27,8 @@ const carouselImages = [
   { src: news10, alt: 'Скраби - Акція' },
 ];
 
-// Define the companies
-const companies = [
-  { name: 'EVA', logo: evaLogo },
-  { name: 'Prostor', logo: prostorLogo },
-  { name: 'Watsons', logo: watsonsLogo },
-  { name: 'Rozetka', logo: rozetkaLogo },
-  { name: 'Makeup', logo: makeupLogo },
-  { name: 'Parfums', logo: parfumsLogo },
-  { name: 'Auchan', logo: auchanLogo },
-  { name: 'Silpo', logo: silpoLogo },
-];
-
-// Create an extended array for infinite scrolling
-const SLIDE_WIDTH = 159; // Static width of one slide in pixels (955px / 6 ≈ 159px)
-const EXTEND_FACTOR = 3; // Repeat the companies array 3 times for smooth infinite scrolling
-const extendedCompanies = Array(EXTEND_FACTOR).fill(companies).flat();
+const SLIDE_WIDTH = 159; // Static width for company slides
+const EXTEND_FACTOR = 3; // Repeat arrays 3 times for smooth infinite scrolling
 
 // Групи для бічної панелі
 const groups = [
@@ -70,9 +44,10 @@ const groups = [
 ];
 
 function CategoryList() {
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
   const [currentProductSlide, setCurrentProductSlide] = useState(0);
   const [currentCompanySlide, setCurrentCompanySlide] = useState(0);
+  const [stores, setStores] = useState([]);
   const [activeGroup, setActiveGroup] = useState(null);
   const [isClosing, setIsClosing] = useState(false);
   const [isHeroTransitioning, setIsHeroTransitioning] = useState(true);
@@ -82,11 +57,30 @@ function CategoryList() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFadingOut, setIsFadingOut] = useState(false);
   const [error, setError] = useState(null);
-  const [subcategoryShowMore, setSubcategoryShowMore] = useState({}); // New state for per-subcategory show more
-  const carouselIntervalRef = useRef(null);
+  const [subcategoryShowMore, setSubcategoryShowMore] = useState({});
+  const heroIntervalRef = useRef(null);
   const productIntervalRef = useRef(null);
-  const totalHeroSlides = carouselImages.length;
-  const totalProductSlides = recommendedProducts.length;
+
+  // Create extended arrays for infinite scrolling
+  const extendedHeroImages = Array(EXTEND_FACTOR).fill(carouselImages).flat();
+  const extendedProducts = recommendedProducts.length ? Array(EXTEND_FACTOR).fill(recommendedProducts).flat() : [];
+  const extendedStores = stores.length ? Array(EXTEND_FACTOR).fill(stores).flat() : [];
+
+  // Fetch stores from the database
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const response = await axios.get('https://price-ua-react-backend.onrender.com/stores');
+        console.log('Stores API Response:', response.data);
+        setStores(response.data);
+      } catch (err) {
+        console.error('Помилка завантаження магазинів:', err);
+        setError('Не вдалося завантажити магазини.');
+      }
+    };
+
+    fetchStores();
+  }, []);
 
   // Завантаження рекомендованих продуктів з API
   useEffect(() => {
@@ -102,7 +96,7 @@ function CategoryList() {
             random: true
           }
         });
-        console.log('Recommended Products API Response:', response.data); // Дебагування
+        console.log('Recommended Products API Response:', response.data);
         setRecommendedProducts(response.data.products);
       } catch (err) {
         console.error('Помилка завантаження рекомендованих продуктів:', err);
@@ -112,7 +106,7 @@ function CategoryList() {
           setIsFadingOut(true);
           setTimeout(() => {
             setIsLoading(false);
-          }, 300); // Match the fadeOutOverlay animation duration
+          }, 300);
         }, 0);
       }
     };
@@ -121,83 +115,85 @@ function CategoryList() {
   }, []);
 
   // Function to start or reset the hero carousel timer
-  const startCarouselTimer = useCallback(() => {
-    if (carouselIntervalRef.current) {
-      clearInterval(carouselIntervalRef.current);
+  const startHeroTimer = () => {
+    if (heroIntervalRef.current) {
+      clearInterval(heroIntervalRef.current);
     }
-    carouselIntervalRef.current = setInterval(() => {
-      setCurrentSlide((prev) => {
+    heroIntervalRef.current = setInterval(() => {
+      setCurrentHeroSlide((prev) => {
         const nextSlide = prev + 1;
-        if (prev >= totalHeroSlides - 1) {
+        if (nextSlide >= carouselImages.length * EXTEND_FACTOR) {
           setTimeout(() => {
             setIsHeroTransitioning(false);
-            setCurrentSlide(0);
+            setCurrentHeroSlide(nextSlide % carouselImages.length);
             setTimeout(() => setIsHeroTransitioning(true), 50);
           }, 500);
-          return 0;
+          return nextSlide % carouselImages.length;
         }
         return nextSlide;
       });
     }, 4000);
-  }, [totalHeroSlides]);
+  };
 
   // Function to start or reset the product carousel timer
-  const startProductTimer = useCallback(() => {
+  const startProductTimer = () => {
     if (productIntervalRef.current) {
       clearInterval(productIntervalRef.current);
     }
     productIntervalRef.current = setInterval(() => {
       setCurrentProductSlide((prev) => {
         const nextSlide = prev + 1;
-        if (prev >= totalProductSlides - 1) {
+        if (nextSlide >= recommendedProducts.length * EXTEND_FACTOR) {
           setTimeout(() => {
             setIsProductTransitioning(false);
-            setCurrentProductSlide(0);
+            setCurrentProductSlide(nextSlide % recommendedProducts.length);
             setTimeout(() => setIsProductTransitioning(true), 50);
           }, 500);
-          return 0;
+          return nextSlide % recommendedProducts.length;
         }
         return nextSlide;
       });
     }, 4000);
-  }, [totalProductSlides]);
+  };
 
   // Start timers on mount
   useEffect(() => {
-    startCarouselTimer();
-    startProductTimer();
+    startHeroTimer();
+    if (recommendedProducts.length) {
+      startProductTimer();
+    }
     return () => {
-      clearInterval(carouselIntervalRef.current);
+      clearInterval(heroIntervalRef.current);
       clearInterval(productIntervalRef.current);
     };
-  }, [startCarouselTimer, startProductTimer]);
+  }, [recommendedProducts.length]);
 
-  // Handle manual navigation for hero carousel and reset carsousel timer
-  const goToSlide = (index) => {
+  // Handle manual navigation for hero carousel
+  const goToHeroSlide = (index) => {
     setIsHeroTransitioning(true);
-    setCurrentSlide(index);
-    startCarouselTimer();
+    setCurrentHeroSlide(index);
+    startHeroTimer();
   };
 
-  // Handle manual navigation for product carousel and reset timer
+  // Handle manual navigation for product carousel
   const goToProductSlide = (index) => {
     setIsProductTransitioning(true);
     setCurrentProductSlide(index);
     startProductTimer();
   };
 
-  // Handle navigation for companies carousel (infinite scrolling)
+  // Handle navigation for companies carousel
   const goToNextCompanySlide = () => {
     setIsCompanyTransitioning(true);
     setCurrentCompanySlide((prev) => {
       const nextSlide = prev + 1;
-      // When reaching the middle set of companies, reset to the first set without animation
-      if (nextSlide === companies.length) {
+      if (nextSlide >= stores.length) {
         setTimeout(() => {
           setIsCompanyTransitioning(false);
-          setCurrentCompanySlide(0);
+          setCurrentCompanySlide(nextSlide % stores.length);
           setTimeout(() => setIsCompanyTransitioning(true), 50);
         }, 500);
+        return nextSlide % stores.length;
       }
       return nextSlide;
     });
@@ -207,9 +203,8 @@ function CategoryList() {
     setIsCompanyTransitioning(true);
     setCurrentCompanySlide((prev) => {
       const prevSlide = prev - 1;
-      // When reaching the start, jump to the last set without animation
       if (prevSlide < 0) {
-        const lastPosition = companies.length - 1;
+        const lastPosition = stores.length - 1;
         setTimeout(() => {
           setIsCompanyTransitioning(false);
           setCurrentCompanySlide(lastPosition);
@@ -221,7 +216,7 @@ function CategoryList() {
     });
   };
 
-  // Handle mouse enter to show dropdown with animation reset
+  // Handle mouse enter for dropdown
   const handleMouseEnter = (groupId) => {
     if (activeGroup !== groupId) {
       if (activeGroup) {
@@ -229,24 +224,23 @@ function CategoryList() {
         setTimeout(() => {
           setIsClosing(false);
           setActiveGroup(groupId);
-        }, 200); // Тривалість dropdownFadeOut
+        }, 200);
       } else {
         setActiveGroup(groupId);
       }
     }
   };
 
-  // Handle mouse leave to close dropdown
+  // Handle mouse leave for dropdown
   const handleMouseLeave = () => {
     setIsClosing(true);
     setTimeout(() => {
       setIsClosing(false);
       setActiveGroup(null);
-    }, 200); // Тривалість dropdownFadeOut
+    }, 200);
   };
 
-
-  // Toggle show more for individual subcategory groups
+  // Toggle show more for subcategories
   const toggleSubcategoryShowMore = (groupId, categoryId) => {
     setSubcategoryShowMore((prev) => ({
       ...prev,
@@ -254,7 +248,7 @@ function CategoryList() {
     }));
   };
 
-  // Function to render star rating
+  // Render star rating
   const renderStars = (rating) => {
     const stars = [];
     for (let i = 0; i < 5; i++) {
@@ -267,17 +261,13 @@ function CategoryList() {
     return stars;
   };
 
-  // Get product price (minimum from store_prices)
+  // Get product price
   const getProductPrice = (storePrices) => {
     if (!storePrices || storePrices.length === 0) return 'Н/Д';
     return Math.min(...storePrices.map(sp => sp.price));
   };
 
-  // Create extended arrays for hero and products carousels
-  const extendedHeroImages = [...carouselImages, ...carouselImages.slice(0, 1)];
-  const extendedProducts = [...recommendedProducts, ...recommendedProducts.slice(0, 1)];
-
-  // Відображення спінера або помилки
+  // Render loading or error
   if (isLoading) {
     return (
       <div className={`loading-overlay ${isFadingOut ? 'fade-out' : ''}`}>
@@ -296,10 +286,7 @@ function CategoryList() {
   return (
     <div className="category-list">
       <div className="main-content">
-        <div
-          className="categories-container"
-          onMouseLeave={handleMouseLeave}
-        >
+        <div className="categories-container" onMouseLeave={handleMouseLeave}>
           <div className="categories-sidebar animate-sidebar">
             {groups.map(group => (
               <div
@@ -307,10 +294,7 @@ function CategoryList() {
                 className="category-group animate-category"
                 onMouseEnter={() => handleMouseEnter(group.id)}
               >
-                <Link
-                  to={`/subcategories/${group.id}`}
-                  className="group-name-wrapper"
-                >
+                <Link to={`/subcategories/${group.id}`} className="group-name-wrapper">
                   <span className="group-name">{group.name}</span>
                 </Link>
               </div>
@@ -362,27 +346,23 @@ function CategoryList() {
           )}
         </div>
         <div className="hero-carousel animate-hero">
-          <div className="carousel-wrapper">
+          <div className="infinite-carousel-wrapper">
             <div
-              className={`carousel-inner ${!isHeroTransitioning ? 'no-transition' : ''}`}
-              style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+              className={`infinite-carousel-inner ${!isHeroTransitioning ? 'no-transition' : ''}`}
+              style={{ transform: `translateX(-${currentHeroSlide * 100}%)` }}
             >
               {extendedHeroImages.map((image, index) => (
-                <div key={index} className="carousel-slide">
-                  <img
-                    src={image.src}
-                    alt={image.alt}
-                    className="carousel-image"
-                  />
+                <div key={index} className="infinite-carousel-slide">
+                  <img src={image.src} alt={image.alt} className="infinite-carousel-image" />
                 </div>
               ))}
             </div>
-            <div className="carousel-dots">
+            <div className="infinite-carousel-dots">
               {carouselImages.map((_, index) => (
                 <span
                   key={index}
-                  className={`dot ${index === currentSlide % totalHeroSlides ? 'active' : ''}`}
-                  onClick={() => goToSlide(index)}
+                  className={`dot ${index === currentHeroSlide % carouselImages.length ? 'active' : ''}`}
+                  onClick={() => goToHeroSlide(index)}
                 />
               ))}
             </div>
@@ -400,13 +380,19 @@ function CategoryList() {
                   className={`companies-inner ${!isCompanyTransitioning ? 'no-transition' : ''}`}
                   style={{ transform: `translateX(-${currentCompanySlide * SLIDE_WIDTH}px)` }}
                 >
-                  {extendedCompanies.map((company, index) => (
-                    <div key={`${company.name}-${index}`} className="company-slide">
-                      <img
-                        src={company.logo}
-                        alt={company.name}
-                        className="company-logo"
-                      />
+                  {extendedStores.map((store, index) => (
+                    <div key={`${store.id}-${index}`} className="company-slide">
+                      <a href={store.link || '#'} target="_blank" rel="noopener noreferrer">
+                        <img
+                          src={store.logo || '/img/placeholder.webp'}
+                          alt={store.name}
+                          className="company-logo"
+                          onError={(e) => {
+                            console.log(`Помилка завантаження логотипу: ${store.logo}`);
+                            e.target.src = '/img/placeholder.webp';
+                          }}
+                        />
+                      </a>
                     </div>
                   ))}
                 </div>
@@ -421,37 +407,37 @@ function CategoryList() {
         </div>
         <div className="recommended-products animate-recommended">
           <div className="recommended-header">Рекомендації</div>
-          <div className="recommended-wrapper">
+          <div className="infinite-recommended-wrapper">
             <div
-              className={`recommended-inner ${!isProductTransitioning ? 'no-transition' : ''}`}
+              className={`infinite-recommended-inner ${!isProductTransitioning ? 'no-transition' : ''}`}
               style={{ transform: `translateX(-${currentProductSlide * 100}%)` }}
             >
               {extendedProducts.map((product, index) => (
-                <div key={index} className="recommended-slide">
+                <div key={index} className="infinite-recommended-slide">
                   <Link to={`/product/${product.id}`}>
                     <img
                       src={product.images[0] || '/img/placeholder.webp'}
                       alt={product.name}
-                      className="recommended-image"
+                      className="infinite-recommended-image"
                       onError={(e) => {
                         console.log(`Помилка завантаження зображення: ${product.images[0]}`);
                         e.target.src = '/img/placeholder.webp';
                       }}
                     />
                   </Link>
-                  <div className="recommended-details">
-                    <Link to={`/product/${product.id}`} className="recommended-link">
-                      <h3 className="recommended-name">{product.name}</h3>
+                  <div className="infinite-recommended-details">
+                    <Link to={`/product/${product.id}`} className="infinite-recommended-link">
+                      <h3 className="infinite-recommended-name">{product.name}</h3>
                     </Link>
-                    <div className="recommended-rating">
+                    <div className="infinite-recommended-rating">
                       {renderStars(product.rating || 0)}
-                      <span className="recommended-reviews">({product.views || 0})</span>
+                      <span className="infinite-recommended-reviews">({product.views || 0})</span>
                     </div>
-                    <div className="recommended-pricing">
-                      <span className="recommended-original-price">{getProductPrice(product.store_prices)} грн</span>
+                    <div className="infinite-recommended-pricing">
+                      <span className="infinite-recommended-original-price">{getProductPrice(product.store_prices)} грн</span>
                     </div>
                     <Link to={`/product/${product.id}`}>
-                      <button className="recommended-add-to-cart">
+                      <button className="infinite-recommended-add-to-cart">
                         Переглянути товар
                       </button>
                     </Link>
@@ -460,11 +446,11 @@ function CategoryList() {
               ))}
             </div>
           </div>
-          <div className="recommended-dots">
+          <div className="infinite-recommended-dots">
             {recommendedProducts.map((_, index) => (
               <span
                 key={index}
-                className={`dot ${index === currentProductSlide % totalProductSlides ? 'active' : ''}`}
+                className={`dot ${index === currentProductSlide % recommendedProducts.length ? 'active' : ''}`}
                 onClick={() => goToProductSlide(index)}
               />
             ))}

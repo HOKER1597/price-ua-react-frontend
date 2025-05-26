@@ -232,13 +232,21 @@
 }
 
 .filter-section h4 {
-  font-size: 18px;
+  font-size: 16px;
   margin-bottom: 10px;
   color: #555;
 }
 
 .filter-items-container {
   overflow: hidden;
+  transition: max-height 0.3s ease-in-out;
+}
+
+.filter-items-container.collapsing {
+  transition: max-height 0.3s ease-in-out;
+}
+
+.filter-items-container.expanding {
   transition: max-height 0.3s ease-in-out;
 }
 

@@ -55,16 +55,55 @@ function Header({ setSearchTerm }) {
   const [showText, setShowText] = useState(false);
   const [user, setUser] = useState(null);
   const [showContextMenu, setShowContextMenu] = useState(false);
+  const [userLocation, setUserLocation] = useState('Завантаження...');
   const navigate = useNavigate();
   const searchInputRef = useRef(null);
   const resultsRef = useRef(null);
   const contextMenuRef = useRef(null);
 
+  // Fetch user location once on component mount
+  useEffect(() => {
+    const getUserLocation = async () => {
+      if (!navigator.geolocation) {
+        console.log('Geolocation is not supported by this browser.');
+        setUserLocation('Місцезнаходження недоступне');
+        return;
+      }
+
+      try {
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0,
+          });
+        });
+
+        const { latitude, longitude } = position.coords;
+        console.log('Geolocation retrieved:', { latitude, longitude });
+
+        // Reverse geocoding using OpenStreetMap Nominatim API
+        const response = await axios.get(
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
+        );
+        const address = response.data.address;
+        const location = address.city || address.town || address.village || 'Невідоме місце';
+        console.log('Reverse geocoding result:', location);
+        setUserLocation(location);
+      } catch (error) {
+        console.error('Error fetching location:', error);
+        setUserLocation('Місцезнаходження недоступне');
+      }
+    };
+
+    getUserLocation();
+  }, []); // Empty dependency array ensures this runs only once
+
   // Load user from localStorage and validate token
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
-    
+
     if (storedUser && token) {
       // Validate token
       const validateToken = async () => {
@@ -314,6 +353,7 @@ function Header({ setSearchTerm }) {
           <button onClick={handleSearch} className="search-button">
             Знайти
           </button>
+          <span className="location-text">{userLocation}</span>
           {showResults && searchResults.length > 0 && (
             <div
               className={`search-results ${isInitialOpen ? 'initial-open' : ''} ${isClosing ? 'closing' : ''}`}

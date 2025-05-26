@@ -1,5 +1,6 @@
+// ProductDetail.js
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import './ProductDetail.css';
 
@@ -126,9 +127,13 @@ function ProductDetail() {
   }, [isFullScreen, product, handlePrevImage, handleNextImage]);
 
   // Обробка кліку по сердечку
-  const handleSaveToggle = async () => {
+  const handleSaveToggle = async (e) => {
+    e.preventDefault(); // Prevent default action
     if (!token) {
       setShowLoginPrompt(true);
+      setTimeout(() => {
+        setShowLoginPrompt(false);
+      }, 3000); // Hide after 3 seconds, matching ProductList
       return;
     }
     try {
@@ -185,11 +190,6 @@ function ProductDetail() {
   // Обробка переходу до логіну
   const handleLoginRedirect = () => {
     navigate('/login');
-  };
-
-  // Закриття модального вікна
-  const handleCloseModal = () => {
-    setShowLoginPrompt(false);
   };
 
   if (isLoading) {
@@ -338,21 +338,21 @@ function ProductDetail() {
               title="Видалити товар"
             >
               <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="#ff0000"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                          <line x1="10" y1="11" x2="10" y2="17"></line>
-                          <line x1="14" y1="11" x2="14" y2="17"></line>
-                        </svg>
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#ff0000"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
             </div>
           </div>
         )}
@@ -455,21 +455,28 @@ function ProductDetail() {
             >
               Перегляд цін
             </button>
-            <span
-              className={`product-detail-heart ${isSaved ? 'saved' : ''}`}
-              onClick={handleSaveToggle}
-              aria-label={isSaved ? 'Видалити з бажаного' : 'Додати до бажаного'}
-            >
-              {isSaved ? (
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="#ff6f61" className="heart-svg">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-              ) : (
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ff6f61" strokeWidth="2" className="heart-svg">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
+            <div className="heart-container">
+              <span
+                className={`product-detail-heart ${isSaved ? 'saved' : ''}`}
+                onClick={handleSaveToggle}
+                aria-label={isSaved ? 'Видалити з бажаного' : 'Додати до бажаного'}
+              >
+                {isSaved ? (
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="#ff6f61" className="heart-svg">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                ) : (
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ff6f61" strokeWidth="2" className="heart-svg">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                )}
+              </span>
+              {showLoginPrompt && (
+                <div className="login-prompt">
+                  Увійдіть в <Link to="/login" className="login-link" onClick={handleLoginRedirect}>аккаунт</Link> щоб додати до бажаного
+                </div>
               )}
-            </span>
+            </div>
           </div>
           <p className="volume">Об'єм: {product.volume || 'Н/Д'}</p>
         </div>
@@ -530,7 +537,7 @@ function ProductDetail() {
                   />
                 </div>
                 <div className="store-details">
-                  <p className="store-years">✓ З нами більше {store.yearsWithUs}-ти років</p>
+                  <p className="store-years">✓ З нами більше {store.years_with_us}-ти років</p>
                   <p className="store-delivery">• Доставка: {store.delivery}</p>
                 </div>
                 <div className="store-price-buy">
@@ -609,18 +616,6 @@ function ProductDetail() {
             <button className="close-fullscreen" onClick={toggleFullScreen}>
               ✕
             </button>
-          </div>
-        </div>
-      )}
-
-      {showLoginPrompt && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <p>Будь ласка, увійдіть, щоб додати товар до бажаного.</p>
-            <div className="modal-buttons">
-              <button onClick={handleLoginRedirect}>Увійти</button>
-              <button onClick={handleCloseModal}>Скасувати</button>
-            </div>
           </div>
         </div>
       )}

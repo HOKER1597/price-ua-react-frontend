@@ -57,7 +57,14 @@ function ProtectedRoute() {
   }, [location.pathname]);
 
   if (isAuthenticated === null) {
-    return <div>Перевірка авторизації...</div>;
+    return (
+      <div className="loading-overlay">
+        <div className="spinner-container">
+          <div className="spinner"></div>
+          <p>Завантаження...</p>
+        </div>
+      </div>
+    );
   }
 
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace state={{ from: location }} />;

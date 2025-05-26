@@ -24,6 +24,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  gap: 20px; /* Add gap to space out the search button and location text */
 }
 
 .search-input {
@@ -62,7 +63,7 @@
 }
 
 .search-button {
-  margin-left: 20px;
+  margin-left: 10px;
   padding: 10px 20px;
   background-color: #0288d1;
   color: white;
@@ -74,6 +75,14 @@
 
 .search-button:hover {
   background-color: #0277bd;
+}
+
+.location-text {
+  padding-left: 30px;
+  font-size: 16px;
+  color: white;
+  font-weight: 400;
+  white-space: nowrap; /* Prevent text wrapping */
 }
 
 .profile {
