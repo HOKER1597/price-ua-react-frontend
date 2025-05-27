@@ -24,7 +24,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 20px; /* Add gap to space out the search button and location text */
+  gap: 10px;
 }
 
 .search-input {
@@ -63,7 +63,6 @@
 }
 
 .search-button {
-  margin-left: 10px;
   padding: 10px 20px;
   background-color: #0288d1;
   color: white;
@@ -78,11 +77,17 @@
 }
 
 .location-text {
-  padding-left: 30px;
+  margin-left: 20px;
   font-size: 16px;
   color: white;
   font-weight: 400;
-  white-space: nowrap; /* Prevent text wrapping */
+  white-space: nowrap;
+  cursor: pointer;
+  position: relative;
+}
+
+.location-text:hover {
+  text-decoration: underline;
 }
 
 .profile {
@@ -155,28 +160,84 @@
 .search-results {
   position: absolute;
   top: 100%;
-  left: 0;
+  left: 240px;
   width: 450px;
   background-color: white;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   border-radius: 5px;
   z-index: 2000;
-  max-height: 500px;
+  max-height: 550px;
   overflow-y: auto;
   padding: 15px;
   opacity: 0;
   transform: translateX(-10px);
   visibility: hidden;
-  transition: visibility 0s linear 0.2s;
+  transition: visibility 0s linear 0.2s, opacity 0.2s ease, transform 0.2s ease;
 }
 
 .search-results.initial-open {
   animation: fadeInPopup 0.2s ease forwards;
+  visibility: visible;
   transition: visibility 0s linear 0s;
 }
 
 .search-results.closing {
   animation: fadeOutPopup 0.2s ease forwards;
+}
+
+.city-popup {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 600px;
+  transform: translateX(-50%);
+  width: 420px;
+  background: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  z-index: 2000;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 15px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+}
+
+.city-popup.open {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  visibility: visible;
+  animation: fadeInPopup 0.2s ease forwards;
+}
+
+.city-popup.closing {
+  animation: fadeOutPopup 0.2s ease forwards;
+}
+
+.city-search-input {
+  width: 400px;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.city-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.city-item {
+  padding: 8px;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.city-item:hover {
+  background-color: #f0f4f8;
 }
 
 .search-category {
@@ -191,6 +252,7 @@
   text-decoration: none;
   transition: color 0.2s ease, transform 0.2s ease;
   transform-origin: left;
+  cursor: pointer;
 }
 
 .category-title:hover {
@@ -214,6 +276,7 @@
   text-decoration: none;
   transition: color 0.2s ease, transform 0.2s ease;
   transform-origin: left;
+  cursor: pointer;
 }
 
 .product-link:hover {
@@ -228,6 +291,7 @@
   text-decoration: none;
   transition: color 0.2s ease, transform 0.2s ease;
   transform-origin: left;
+  cursor: pointer;
 }
 
 .more-products:hover {
@@ -245,6 +309,7 @@
   padding: 10px 0;
   transition: color 0.2s ease, transform 0.2s ease;
   transform-origin: center;
+  cursor: pointer;
 }
 
 .view-all:hover {
@@ -260,11 +325,11 @@
 @keyframes fadeInPopup {
   from {
     opacity: 0;
-    transform: translateX(-10px);
+    transform: translateX(-50%) translateY(-10px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(-50%) translateY(0);
     visibility: visible;
   }
 }
@@ -272,11 +337,11 @@
 @keyframes fadeOutPopup {
   from {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(-50%) translateY(0);
   }
   to {
     opacity: 0;
-    transform: translateX(-10px);
+    transform: translateX(-50%) translateY(-10px);
     visibility: hidden;
   }
 }

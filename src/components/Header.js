@@ -41,7 +41,7 @@ export const categoryNames = {
   hairdye: 'Фарби для волосся',
   styling: 'Засоби для укладки',
   dryshampoo: 'Сухі шампуні',
-  hairloss: 'Засоби проти випадіння волосся',
+  hairloss: 'Засоби проти втрати волосся',
 };
 
 function Header({ setSearchTerm }) {
@@ -55,49 +55,89 @@ function Header({ setSearchTerm }) {
   const [showText, setShowText] = useState(false);
   const [user, setUser] = useState(null);
   const [showContextMenu, setShowContextMenu] = useState(false);
-  const [userLocation, setUserLocation] = useState('Завантаження...');
+  const [userLocation, setUserLocation] = useState('Виберіть місто');
+  const [showCityPopup, setShowCityPopup] = useState(false);
+  const [cities, setCities] = useState([]);
+  const [citySearch, setCitySearch] = useState('');
   const navigate = useNavigate();
   const searchInputRef = useRef(null);
   const resultsRef = useRef(null);
   const contextMenuRef = useRef(null);
+  const cityPopupRef = useRef(null);
 
-  // Fetch user location once on component mount
+  // Top 10 largest Ukrainian cities, with last one as "За розташуванням"
+  const topCities = [
+    'Київ', 'Харків', 'Одеса', 'Дніпро', 'Херсон',
+    'Запоріжжя', 'Львів', 'Кривий Ріг', 'Миколаїв', 'За розташуванням'
+  ];
+
+  // Fetch cities from backend
   useEffect(() => {
-    const getUserLocation = async () => {
-      if (!navigator.geolocation) {
-        console.log('Geolocation is not supported by this browser.');
-        setUserLocation('Місцезнаходження недоступне');
-        return;
-      }
-
+    const fetchCities = async () => {
       try {
-        const position = await new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
-          });
-        });
-
-        const { latitude, longitude } = position.coords;
-        console.log('Geolocation retrieved:', { latitude, longitude });
-
-        // Reverse geocoding using OpenStreetMap Nominatim API
-        const response = await axios.get(
-          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
-        );
-        const address = response.data.address;
-        const location = address.city || address.town || address.village || 'Невідоме місце';
-        console.log('Reverse geocoding result:', location);
-        setUserLocation(location);
+        const response = await axios.get('https://price-ua-react-backend.onrender.com/cities');
+        console.log('Cities fetched:', response.data.length);
+        setCities(response.data);
       } catch (error) {
-        console.error('Error fetching location:', error);
-        setUserLocation('Місцезнаходження недоступне');
+        console.error('Error fetching cities:', error);
       }
     };
+    fetchCities();
+  }, []);
 
-    getUserLocation();
-  }, []); // Empty dependency array ensures this runs only once
+  // Handle geolocation request (used for initial prompt and "За розташуванням")
+  const fetchGeolocation = async () => {
+    if (!navigator.geolocation) {
+      console.log('Geolocation is not supported by this browser.');
+      localStorage.setItem('userLocationStatus', 'denied');
+      setUserLocation('Виберіть місто');
+      return;
+    }
+
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+      console.log('Geolocation retrieved:', { latitude, longitude });
+
+      const response = await axios.get(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
+      );
+      const address = response.data.address;
+      const location = address.city || address.town || address.village || 'Невідоме місце';
+      console.log('Reverse geocoding result:', location);
+      setUserLocation(location);
+      localStorage.setItem('userLocationStatus', location);
+      setShowCityPopup(false);
+    } catch (error) {
+      console.error('Error fetching location:', error);
+      localStorage.setItem('userLocationStatus', 'denied');
+      setUserLocation('Виберіть місто');
+      setShowCityPopup(false);
+    }
+  };
+
+  // Handle initial geolocation prompt on first visit
+  useEffect(() => {
+    const locationStatus = localStorage.getItem('userLocationStatus');
+    if (locationStatus) {
+      console.log('Location status from localStorage:', locationStatus);
+      if (locationStatus !== 'denied') {
+        setUserLocation(locationStatus);
+      } else {
+        setUserLocation('Виберіть місто');
+      }
+      return;
+    }
+
+    fetchGeolocation();
+  }, []);
 
   // Load user from localStorage and validate token
   useEffect(() => {
@@ -105,7 +145,6 @@ function Header({ setSearchTerm }) {
     const token = localStorage.getItem('token');
 
     if (storedUser && token) {
-      // Validate token
       const validateToken = async () => {
         try {
           console.log('Validating token in Header');
@@ -113,7 +152,7 @@ function Header({ setSearchTerm }) {
             headers: { Authorization: `Bearer ${token}` },
           });
           console.log('Token valid, user data:', response.data);
-          setUser(JSON.parse(storedUser)); // Set user only if token is valid
+          setUser(JSON.parse(storedUser));
         } catch (err) {
           console.error('Token validation failed in Header:', {
             status: err.response?.status,
@@ -132,14 +171,12 @@ function Header({ setSearchTerm }) {
             setUser(null);
           } else {
             console.error('Unexpected error during token validation:', err);
-            // Optionally handle unexpected errors (e.g., network issues) by logging out
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             setUser(null);
           }
         }
       };
-
       validateToken();
     } else {
       console.log('No user or token found in localStorage');
@@ -160,14 +197,18 @@ function Header({ setSearchTerm }) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // Handle clicks outside context menu and city popup
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (contextMenuRef.current && !contextMenuRef.current.contains(event.target)) {
         setShowContextMenu(false);
       }
+      if (cityPopupRef.current && !cityPopupRef.current.contains(event.target) && !event.target.classList.contains('location-text')) {
+        setShowCityPopup(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => document.addEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleSearch = useCallback(() => {
@@ -194,7 +235,6 @@ function Header({ setSearchTerm }) {
         const response = await axios.get('https://price-ua-react-backend.onrender.com/products', {
           params: { search: query },
         });
-
         setSearchResults(response.data.groupedResults || []);
         setShowResults(true);
         setIsResultsUpdated(true);
@@ -271,6 +311,32 @@ function Header({ setSearchTerm }) {
   const toggleContextMenu = () => {
     setShowContextMenu(!showContextMenu);
   };
+
+  const toggleCityPopup = () => {
+    setShowCityPopup(!showCityPopup);
+    setCitySearch('');
+  };
+
+  const handleCitySelect = (cityName) => {
+    console.log('City selected:', cityName);
+    if (cityName === 'За розташуванням') {
+      fetchGeolocation();
+    } else {
+      setUserLocation(cityName);
+      localStorage.setItem('userLocationStatus', cityName);
+      setShowCityPopup(false);
+      setCitySearch('');
+    }
+  };
+
+  const filteredCities = citySearch
+    ? cities.filter(city =>
+        city.name_ua.toLowerCase().includes(citySearch.toLowerCase())
+      )
+    : [
+        ...cities.filter(city => topCities.slice(0, -1).includes(city.name_ua)),
+        { id: 'geolocation', name_ua: 'За розташуванням' }
+      ].slice(0, 10);
 
   useEffect(() => {
     if (isResultsUpdated && !isLoading && searchResults.length > 0) {
@@ -353,7 +419,31 @@ function Header({ setSearchTerm }) {
           <button onClick={handleSearch} className="search-button">
             Знайти
           </button>
-          <span className="location-text">{userLocation}</span>
+          <span className="location-text" onClick={toggleCityPopup} style={{ cursor: 'pointer' }}>
+            {userLocation}
+          </span>
+          {showCityPopup && (
+            <div className={`city-popup ${showCityPopup ? 'open' : ''}`} ref={cityPopupRef}>
+              <input
+                type="text"
+                placeholder="Пошук міста..."
+                value={citySearch}
+                onChange={(e) => setCitySearch(e.target.value)}
+                className="city-search-input"
+              />
+              <div className="city-list">
+                {filteredCities.map((city) => (
+                  <div
+                    key={city.id}
+                    className="city-item"
+                    onClick={() => handleCitySelect(city.name_ua)}
+                  >
+                    {city.name_ua}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {showResults && searchResults.length > 0 && (
             <div
               className={`search-results ${isInitialOpen ? 'initial-open' : ''} ${isClosing ? 'closing' : ''}`}
