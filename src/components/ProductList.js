@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
+import { useError } from './ErrorContext'; // Додаємо useError
 import './ProductList.css';
 import { categoryNames } from './Header.js';
 
 function ProductList({ searchTerm }) {
   const { categoryId } = useParams();
   const location = useLocation();
+  const { setError, clearError } = useError(); // Використовуємо ErrorContext
 
   // Memoize queryParams and derived values
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -122,6 +124,8 @@ function ProductList({ searchTerm }) {
   const handleHeartClick = async (productId, event) => {
     event.preventDefault();
     if (!user || !token) {
+      clearError(); // Очищаємо помилки перед показом промпта
+      setError('Увійдіть в аккаунт, щоб додати до бажаного.');
       setShowLoginPrompt(prev => ({ ...prev, [productId]: true }));
       setTimeout(() => {
         setShowLoginPrompt(prev => ({ ...prev, [productId]: false }));
@@ -140,6 +144,7 @@ function ProductList({ searchTerm }) {
       return newSet;
     });
 
+    clearError(); // Очищаємо помилки перед запитом
     try {
       if (isSaved) {
         await axios.delete(`https://price-ua-react-backend.onrender.com/saved-products/${productId}`, {
@@ -163,7 +168,7 @@ function ProductList({ searchTerm }) {
         return newSet;
       });
       console.error('Помилка при зміні статусу збереження:', error);
-      alert('Не вдалося оновити статус бажаного. Спробуйте ще раз.');
+      setError('Не вдалося оновити статус бажаного. Спробуйте ще раз.');
     }
   };
 
@@ -184,15 +189,17 @@ function ProductList({ searchTerm }) {
     setTotalProducts(prev => prev - 1);
     setPreviewProductCount(prev => prev - 1);
 
+    clearError(); // Очищаємо помилки перед запитом
     try {
       await axios.delete(`https://price-ua-react-backend.onrender.com/admin/product/${productToDelete}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
     } catch (error) {
       console.error('Помилка видалення товару:', error);
-      alert('Не вдалося видалити товар. Спробуйте ще раз.');
+      setError('Не вдалося видалити товар. Спробуйте ще раз.');
       // Revert optimistic update on failure
       const fetchProducts = async () => {
+        clearError(); // Очищаємо помилки перед повторним запитом
         try {
           const response = await axios.get('https://price-ua-react-backend.onrender.com/products', {
             params: { category: categoryId, search: searchQuery, limit: 1000 },
@@ -203,6 +210,7 @@ function ProductList({ searchTerm }) {
           setPreviewProductCount(response.data.products.length);
         } catch (err) {
           console.error('Помилка відновлення продуктів:', err);
+          setError('Не вдалося відновити товари. Перевірте підключення до сервера.');
         }
       };
       fetchProducts();
@@ -339,6 +347,7 @@ function ProductList({ searchTerm }) {
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
+      clearError(); // Очищаємо помилки перед запитом
       try {
         const requestParams = {
           search: searchQuery || undefined,
@@ -353,6 +362,7 @@ function ProductList({ searchTerm }) {
         let savedProductIds = [];
         if (user && token && productsData.length > 0) {
           const productIds = productsData.map(p => p.id);
+          clearError(); // Очищаємо помилки перед запитом
           try {
             const savedResponse = await axios.post(
               'https://price-ua-react-backend.onrender.com/saved-products/bulk',
@@ -362,6 +372,7 @@ function ProductList({ searchTerm }) {
             savedProductIds = savedResponse.data.savedProductIds || [];
           } catch (error) {
             console.error('Помилка завантаження статусів збереження:', error);
+            setError('Не вдалося завантажити статуси збереження.');
           }
         }
 
@@ -481,7 +492,7 @@ function ProductList({ searchTerm }) {
         }
       } catch (error) {
         console.error('Помилка завантаження продуктів:', error);
-        alert('Не вдалося завантажити продукти. Перевірте підключення до сервера.');
+        setError('Не вдалося завантажити продукти. Перевірте підключення до сервера.');
         setAllProducts([]);
         setFilteredProducts([]);
         setTotalProducts(0);
@@ -493,7 +504,7 @@ function ProductList({ searchTerm }) {
     };
 
     fetchProducts();
-  }, [categoryId, searchQuery, initialType, isSearchPage, user, token]);
+  }, [categoryId, searchQuery, initialType, isSearchPage, user, token, setError, clearError]);
 
   // Update preview count and disabled filters
   useEffect(() => {
@@ -574,6 +585,7 @@ function ProductList({ searchTerm }) {
 
   // Handle type button click
   const handleTypeButtonClick = (type) => {
+    clearError(); // Очищаємо помилки перед застосуванням фільтра
     setSelectedFilters((prev) => ({
       ...prev,
       types: [type],
@@ -592,6 +604,7 @@ function ProductList({ searchTerm }) {
 
   // Remove a filter
   const removeFilter = (filterType, value) => {
+    clearError(); // Очищаємо помилки перед видаленням фільтра
     setSelectedFilters((prev) => {
       const updatedValues = (prev[filterType] || []).filter((v) => v !== value);
       const updatedFilters = { ...prev, [filterType]: updatedValues };
@@ -602,6 +615,7 @@ function ProductList({ searchTerm }) {
 
   // Reset all filters
   const resetAllFilters = () => {
+    clearError(); // Очищаємо помилки перед скиданням
     const emptyFilters = {
       brands: [],
       priceRanges: [],
@@ -630,6 +644,7 @@ function ProductList({ searchTerm }) {
 
   // Apply filters
   const applyFilters = () => {
+    clearError(); // Очищаємо помилки перед застосуванням
     setAppliedFilters({ ...selectedFilters });
     setCurrentPage(1);
     setStartPage(1);
@@ -711,6 +726,7 @@ function ProductList({ searchTerm }) {
   const totalPages = Math.ceil(totalProducts / productsPerPage);
 
   const handlePageChange = (page) => {
+    clearError(); // Очищаємо помилки перед зміною сторінки
     setCurrentPage(page);
     setStartPage(page);
     setLoadMorePages(1);
@@ -719,6 +735,7 @@ function ProductList({ searchTerm }) {
   };
 
   const handleLoadMore = () => {
+    clearError(); // Очищаємо помилки перед завантаженням
     setCurrentPage((prev) => prev + 1);
     setLoadMorePages((prev) => prev + 1);
     setIsPaginated(false);
@@ -785,7 +802,7 @@ function ProductList({ searchTerm }) {
       {showDeleteModal && (
         <div className="delete-modal-overlay">
           <div className="delete-modal">
-            <p>Ви точно хочете видалити цей ({productToDelete}) товар?</p>
+            <p>Ви точно хочете видалити цей товар?</p>
             <div className="delete-modal-buttons">
               <button className="delete-confirm-btn" onClick={handleDeleteConfirm}>Так</button>
               <button className="delete-cancel-btn" onClick={handleDeleteCancel}>Ні</button>
@@ -911,7 +928,7 @@ function ProductList({ searchTerm }) {
             {filters.brands.length > 12 && (
               <button className="show-more-btn" onClick={() => toggleShowMore('brands')}>
                 {showMore.brands ? 'Менше ↑' : 'Більше ↓'}
-                </button>
+              </button>
             )}
           </div>
 
@@ -1073,7 +1090,7 @@ function ProductList({ searchTerm }) {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                           >
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"></path>
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
                           </svg>
                         </div>
                       </div>
@@ -1097,10 +1114,10 @@ function ProductList({ searchTerm }) {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         >
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                          <line x1="10" y1="11" x2="10" y2="17"></line>
-                          <line x1="14" y1="11" x2="14" y2="17"></line>
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          <line x1="10" y1="11" x2="10" y2="17" />
+                          <line x1="14" y1="11" x2="14" y2="17" />
                         </svg>
                       </div>
                     )}

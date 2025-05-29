@@ -53,7 +53,7 @@
 .edit-icon-product {
   cursor: pointer;
   transition: transform 0.2s ease;
-  visibility: visible !important; /* Завжди видно для адміністраторів */
+  visibility: visible !important;
   opacity: 1 !important;
 }
 
@@ -64,7 +64,7 @@
 .trash-icon-product {
   cursor: pointer;
   transition: transform 0.2s ease;
-  visibility: visible !important; /* Завжди видно для адміністраторів */
+  visibility: visible !important;
   opacity: 1 !important;
 }
 
@@ -304,8 +304,8 @@
   transition: all 0.3s ease;
   margin-left: 10px;
   margin-top: 0px;
-  visibility: visible !important; /* Ensure always visible */
-  opacity: 1 !important; /* Prevent hiding */
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .product-detail-heart.saved .heart-svg {
@@ -367,6 +367,70 @@
     opacity: 0;
     transform: translateY(-5px);
   }
+}
+
+.map-container {
+  width: 100%;
+  height: 200px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+
+.map {
+  width: 100%;
+  height: 100%;
+}
+
+.fullscreen-map-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.fullscreen-map-content {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+  width: 100%;
+  height: 100%;
+}
+
+.fullscreen-map {
+  width: 100%;
+  height: 100%;
+}
+
+.close-fullscreen-map {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  z-index: 1001; /* Ensure button is above map tiles and controls */
+  transition: background-color 0.3s ease;
+}
+
+.close-fullscreen-map:hover {
+  background-color: rgba(0, 0, 0, 0.7);
 }
 
 .volume {
@@ -560,7 +624,7 @@
   background-color: #0277bd;
 }
 
-/* Повноекранний режим */
+/* Повноекранний режим для зображень */
 .fullscreen-modal {
   position: fixed;
   top: 0;
@@ -644,6 +708,18 @@
   color: white;
   font-size: 24px;
   cursor: pointer;
+}
+
+.store-label {
+  text-align: center !important;
+  width: auto !important;
+  white-space: nowrap; /* Забезпечує, що текст не переноситься */
+  font-size: 14px;
+  font-weight: bold;
+  background-color: rgba(255, 255, 255, 0.8); /* Легкий фон для читабельності */
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 2px 5px;
 }
 
 /* Спінер і затемнення */

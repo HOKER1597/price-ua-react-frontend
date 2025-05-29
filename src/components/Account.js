@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useError } from './ErrorContext'; // Додаємо useError
 import './Account.css';
 
 function Account() {
@@ -8,7 +9,6 @@ function Account() {
   const [email, setEmail] = useState('');
   const [gender, setGender] = useState('');
   const [birthDate, setBirthDate] = useState('');
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [animate, setAnimate] = useState(false);
   const [fieldAnimations, setFieldAnimations] = useState({
@@ -18,6 +18,7 @@ function Account() {
     avatar: false,
   });
   const navigate = useNavigate();
+  const { setError } = useError(); // Використовуємо контекст
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -54,9 +55,8 @@ function Account() {
       window.dispatchEvent(new Event('storage'));
       setUser(response.data.user);
       setSuccess('Дані успішно оновлено');
-      setError('');
     } catch (err) {
-      setError(err.response?.data?.error || 'Помилка сервера');
+      setError(err.response?.data?.error || 'Помилка оновлення даних');
       setSuccess('');
     }
   };
@@ -90,7 +90,7 @@ function Account() {
       window.dispatchEvent(new Event('storage'));
       setUser(response.data.user);
       setSuccess('Аватарку успішно завантажено');
-      setError('');
+      setError(null); // Очищаємо помилку
       // Reset input
       e.target.value = null;
     } catch (err) {
@@ -142,7 +142,6 @@ function Account() {
           <h2 className="account-nickname">{user.nickname}</h2>
         </div>
         <div className="account-details">
-          {error && <p className="error">{error}</p>}
           {success && <p className="success">{success}</p>}
           <button
             onClick={() => document.getElementById('avatar-upload').click()}

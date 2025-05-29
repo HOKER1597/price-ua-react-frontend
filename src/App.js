@@ -18,6 +18,8 @@ import AdminBrandEdit from './components/Admin/AdminBrandEdit';
 import AdminStoreCreate from './components/Admin/AdminStoreCreate';
 import AdminStoreEdit from './components/Admin/AdminStoreEdit';
 import { DragDropProvider } from './DragDropSetup';
+import { ErrorProvider } from './components/ErrorContext';
+import ErrorBoundary from './ErrorBoundary';
 import './App.css';
 
 function App() {
@@ -25,33 +27,37 @@ function App() {
 
   return (
     <DragDropProvider>
-      <Router>
-        <div className="app">
-          <Header setSearchTerm={setSearchTerm} />
-          <div className="content">
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={<CategoryList />} />
-              <Route path="/subcategories/:groupId" element={<CategorySubcategories />} />
-              <Route path="/category/:categoryId" element={<ProductList searchTerm={searchTerm} />} />
-              <Route path="/product/:productId" element={<ProductDetail />} />
-              <Route path="/search" element={<ProductList searchTerm={searchTerm} />} />
-              <Route path="/register" element={<Register />} />
-              <Route element={<ProtectedRoute />}>
-                <Route path="/account" element={<Account />} />
-                <Route path="/wishlist" element={<Wishlist />} />
-                <Route path="/admin/" element={<AdminDashboard />} />
-                <Route path="/admin/brand-create" element={<AdminBrandCreate />} />
-                <Route path="/admin/brand-edit" element={<AdminBrandEdit />} />
-                <Route path="/admin/store-create" element={<AdminStoreCreate />} />
-                <Route path="/admin/store-edit" element={<AdminStoreEdit />} />
-                <Route path="/admin/product-create" element={<AdminProductCreate />} />
-                <Route path="/admin/product-edit" element={<AdminProductEdit />} />
-              </Route>
-            </Routes>
+      <ErrorProvider>
+        <Router>
+          <div className="app">
+            <Header setSearchTerm={setSearchTerm} />
+            <div className="content">
+              <ErrorBoundary>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/" element={<CategoryList />} />
+                  <Route path="/subcategories/:groupId" element={<CategorySubcategories />} />
+                  <Route path="/category/:categoryId" element={<ProductList searchTerm={searchTerm} />} />
+                  <Route path="/product/:productId" element={<ProductDetail />} />
+                  <Route path="/search" element={<ProductList searchTerm={searchTerm} />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route element={<ProtectedRoute />}>
+                    <Route path="/account" element={<Account />} />
+                    <Route path="/wishlist" element={<Wishlist />} />
+                    <Route path="/admin/" element={<AdminDashboard />} />
+                    <Route path="/admin/brand-create" element={<AdminBrandCreate />} />
+                    <Route path="/admin/brand-edit" element={<AdminBrandEdit />} />
+                    <Route path="/admin/store-create" element={<AdminStoreCreate />} />
+                    <Route path="/admin/store-edit" element={<AdminStoreEdit />} />
+                    <Route path="/admin/product-create" element={<AdminProductCreate />} />
+                    <Route path="/admin/product-edit" element={<AdminProductEdit />} />
+                  </Route>
+                </Routes>
+              </ErrorBoundary>
+            </div>
           </div>
-        </div>
-      </Router>
+        </Router>
+      </ErrorProvider>
     </DragDropProvider>
   );
 }

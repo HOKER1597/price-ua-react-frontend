@@ -645,8 +645,11 @@ export const subcategoriesData = {
   ],
 };
 
+// Примітка: Цей компонент не потребує обробки помилок через ErrorContext, оскільки використовує статичні дані (subcategoriesData)
+// і не виконує API-запитів. Код залишається без змін для сумісності з глобальним ErrorBoundary в App.js.
+
 function CategorySubcategories() {
-  const { groupId } = useParams(); // Отримуємо ID категорії з URL
+  const { groupId } = useParams(); // Отримуємо ID групи з URL
   const subcategories = subcategoriesData[groupId] || [];
 
   // Розподіляємо підкатегорії на 3 колонки
@@ -661,12 +664,13 @@ function CategorySubcategories() {
         {groupId === 'makeup' ? 'Макіяж' :
          groupId === 'skincare' ? 'Догляд за шкірою' :
          groupId === 'haircare' ? 'Догляд за волоссям' :
-         groupId === 'men-care' ? 'Чоловічий догляд' :
+         groupId === 'men-care' ? 'Чоловічий догляд' : 
          groupId === 'child-care' ? 'Дитячий догляд' :
          groupId === 'natural-cosmetics' ? 'Натуральна косметика' :
          groupId === 'perfumery' ? 'Парфумерія' :
          groupId === 'accessories' ? 'Аксесуари' :
-         groupId === 'gift-sets' ? 'Набори/Подарунки' : 'Категорія'}
+         groupId === 'gift-sets' ? 'Набори/Подарунки' : 
+         'Категория'}
       </h1>
       <div className="subcategories-container">
         {columns.map((column, colIndex) => (

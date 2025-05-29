@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import './CategoryList.css';
 import { subcategoriesData } from './CategorySubcategories';
+import { useError } from './ErrorContext'; // Додаємо useError
 import news1 from '../img/news1.avif';
 import news2 from '../img/news2.avif';
 import news3 from '../img/news3.avif';
@@ -56,10 +57,10 @@ function CategoryList() {
   const [recommendedProducts, setRecommendedProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFadingOut, setIsFadingOut] = useState(false);
-  const [error, setError] = useState(null);
   const [subcategoryShowMore, setSubcategoryShowMore] = useState({});
   const heroIntervalRef = useRef(null);
   const productIntervalRef = useRef(null);
+  const { setError, clearError } = useError(); // Використовуємо контекст
 
   // Create extended arrays for infinite scrolling
   const extendedHeroImages = Array(EXTEND_FACTOR).fill(carouselImages).flat();
@@ -80,14 +81,14 @@ function CategoryList() {
     };
 
     fetchStores();
-  }, []);
+  }, [setError]);
 
   // Завантаження рекомендованих продуктів з API
   useEffect(() => {
     const fetchRecommendedProducts = async () => {
       setIsLoading(true);
       setIsFadingOut(false);
-      setError(null);
+      clearError(); // Очищаємо помилку перед запитом
       try {
         const response = await axios.get('https://price-ua-react-backend.onrender.com/products', {
           params: {
@@ -112,7 +113,7 @@ function CategoryList() {
     };
 
     fetchRecommendedProducts();
-  }, []);
+  }, [setError, clearError]);
 
   // Function to start or reset the hero carousel timer
   const startHeroTimer = useCallback(() => {
@@ -267,7 +268,7 @@ function CategoryList() {
     return Math.min(...storePrices.map(sp => sp.price));
   };
 
-  // Render loading or error
+  // Render loading
   if (isLoading) {
     return (
       <div className={`loading-overlay ${isFadingOut ? 'fade-out' : ''}`}>
@@ -277,10 +278,6 @@ function CategoryList() {
         </div>
       </div>
     );
-  }
-
-  if (error) {
-    return <div className="error">{error}</div>;
   }
 
   return (
