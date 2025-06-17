@@ -379,6 +379,17 @@
   position: relative;
 }
 
+.map-container.hidden {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s;
+}
+
+.map-container.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
 .map {
   width: 100%;
   height: 100%;
@@ -425,12 +436,74 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  z-index: 1001; /* Ensure button is above map tiles and controls */
+  z-index: 1001;
   transition: background-color 0.3s ease;
 }
 
 .close-fullscreen-map:hover {
   background-color: rgba(0, 0, 0, 0.7);
+}
+
+.city-map-search-input {
+  width: 400px;
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  outline: none;
+  transition: border-color 0.3s ease;
+  position: absolute;
+  top: 0;
+  left: 100px;
+  right: 0;
+  z-index: 1001;
+}
+
+.city-map-search-input:focus {
+  border-color: #0288d1;
+}
+
+.city-map-popup {
+  position: absolute;
+  top: 32px;
+  left: 100px;
+  right: 0;
+  width: 425px;
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1001;
+  max-height: 400px;
+  overflow-y: auto;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+}
+
+.city-map-popup.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.city-list {
+  padding: 5px 0;
+}
+
+.city-item {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.city-item:hover {
+  background-color: #f0f0f0;
 }
 
 .volume {
@@ -554,7 +627,7 @@
   display: flex;
   align-items: center;
   padding: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid #ccc;
   border-radius: 5px;
 }
 
@@ -713,10 +786,10 @@
 .store-label {
   text-align: center !important;
   width: auto !important;
-  white-space: nowrap; /* Забезпечує, що текст не переноситься */
+  white-space: nowrap;
   font-size: 14px;
   font-weight: bold;
-  background-color: rgba(255, 255, 255, 0.8); /* Легкий фон для читабельності */
+  background-color: rgba(255, 255, 255, 0.8);
   border: 1px solid #ccc;
   border-radius: 3px;
   padding: 2px 5px;

@@ -4,16 +4,16 @@ import axios from 'axios';
 import './CategoryList.css';
 import { subcategoriesData } from './CategorySubcategories';
 import { useError } from './ErrorContext'; // Додаємо useError
-import news1 from '../img/news1.avif';
-import news2 from '../img/news2.avif';
-import news3 from '../img/news3.avif';
-import news4 from '../img/news4.avif';
-import news5 from '../img/news5.avif';
-import news6 from '../img/news6.avif';
-import news7 from '../img/news7.avif';
-import news8 from '../img/news8.avif';
-import news9 from '../img/news9.avif';
-import news10 from '../img/news10.avif';
+import news1 from '../img/news1.png';
+import news2 from '../img/news2.png';
+import news3 from '../img/news3.png';
+import news4 from '../img/news4.png';
+import news5 from '../img/news5.png';
+import news6 from '../img/news6.png';
+import news7 from '../img/news7.png';
+import news8 from '../img/news8.png';
+import news9 from '../img/news9.png';
+import news10 from '../img/news10.png';
 
 const carouselImages = [
   { src: news1, alt: 'Шампуні - Акція' },

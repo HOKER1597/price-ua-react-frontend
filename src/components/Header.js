@@ -5,10 +5,10 @@ import './Header.css';
 
 export const categoryNames = {
   shampoos: 'Шампуні',
-  facecream: 'Креми для обличчя',
+  facecream: 'Кремити для обличчя',
   facemask: 'Маски для обличчя',
-  tonal: 'Тональні засоби',
-  powder: 'Пудри',
+  tonal: 'Тональльні засоби',
+  powder: 'удри',
   blush: 'Рум’яна',
   highlighter: 'Хайлайтери',
   concealer: 'Консилери',
@@ -55,7 +55,7 @@ function Header({ setSearchTerm }) {
   const [showText, setShowText] = useState(false);
   const [user, setUser] = useState(null);
   const [showContextMenu, setShowContextMenu] = useState(false);
-  const [userLocation, setUserLocation] = useState('Виберіть місто');
+  const [userLocation, setUserLocation] = useState(localStorage.getItem('userLocationStatus') || 'Виберіть місто');
   const [showCityPopup, setShowCityPopup] = useState(false);
   const [cities, setCities] = useState([]);
   const [citySearch, setCitySearch] = useState('');
@@ -65,6 +65,9 @@ function Header({ setSearchTerm }) {
   const contextMenuRef = useRef(null);
   const cityPopupRef = useRef(null);
 
+  // Логування рендерингу для дебагінгу
+  console.log('Рендеринг Header, стан:', { userLocation, showCityPopup, user });
+
   // Top 10 largest Ukrainian cities, with last one as "За розташуванням"
   const topCities = [
     'Київ', 'Харків', 'Одеса', 'Дніпро', 'Херсон',
@@ -73,6 +76,7 @@ function Header({ setSearchTerm }) {
 
   // Fetch cities from backend
   useEffect(() => {
+    console.log('useEffect для fetchCities викликано');
     const fetchCities = async () => {
       try {
         const response = await axios.get('https://price-ua-react-backend.onrender.com/cities');
@@ -86,7 +90,8 @@ function Header({ setSearchTerm }) {
   }, []);
 
   // Handle geolocation request (used for initial prompt and "За розташуванням")
-  const fetchGeolocation = async () => {
+  const fetchGeolocation = useCallback(async () => {
+    console.log('fetchGeolocation викликано');
     if (!navigator.geolocation) {
       console.log('Geolocation is not supported by this browser.');
       localStorage.setItem('userLocationStatus', 'denied');
@@ -112,8 +117,15 @@ function Header({ setSearchTerm }) {
       const address = response.data.address;
       const location = address.city || address.town || address.village || 'Невідоме місце';
       console.log('Reverse geocoding result:', location);
-      setUserLocation(location);
-      localStorage.setItem('userLocationStatus', location);
+      setUserLocation(prev => {
+        if (prev === location) {
+          console.log('Місце не змінилося, пропускаємо оновлення');
+          return prev;
+        }
+        console.log('Оновлення userLocation:', location);
+        localStorage.setItem('userLocationStatus', location);
+        return location;
+      });
       setShowCityPopup(false);
     } catch (error) {
       console.error('Error fetching location:', error);
@@ -121,26 +133,34 @@ function Header({ setSearchTerm }) {
       setUserLocation('Виберіть місто');
       setShowCityPopup(false);
     }
-  };
+  }, []);
 
   // Handle initial geolocation prompt on first visit
   useEffect(() => {
+    console.log('useEffect для ініціалізації геолокації викликано');
+    let isMounted = true;
     const locationStatus = localStorage.getItem('userLocationStatus');
     if (locationStatus) {
       console.log('Location status from localStorage:', locationStatus);
-      if (locationStatus !== 'denied') {
+      if (locationStatus !== 'denied' && isMounted) {
         setUserLocation(locationStatus);
-      } else {
+      } else if (isMounted) {
         setUserLocation('Виберіть місто');
       }
       return;
     }
 
     fetchGeolocation();
-  }, []);
+
+    return () => {
+      console.log('Очищення useEffect для ініціалізації геолокації');
+      isMounted = false;
+    };
+  }, [fetchGeolocation]);
 
   // Load user from localStorage and validate token
   useEffect(() => {
+    console.log('useEffect для валідації токена викликано');
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
 
@@ -184,6 +204,7 @@ function Header({ setSearchTerm }) {
     }
 
     const handleStorageChange = () => {
+      console.log('handleStorageChange викликано');
       const updatedUser = localStorage.getItem('user');
       const updatedToken = localStorage.getItem('token');
       if (updatedUser && updatedToken) {
@@ -194,11 +215,15 @@ function Header({ setSearchTerm }) {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    return () => {
+      console.log('Очищення useEffect для валідації токена');
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   // Handle clicks outside context menu and city popup
   useEffect(() => {
+    console.log('useEffect для handleClickOutside викликано');
     const handleClickOutside = (event) => {
       if (contextMenuRef.current && !contextMenuRef.current.contains(event.target)) {
         setShowContextMenu(false);
@@ -208,11 +233,14 @@ function Header({ setSearchTerm }) {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      console.log('Очищення useEffect для handleClickOutside');
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const handleSearch = useCallback(() => {
-    console.log('handleSearch called with searchQuery:', searchQuery);
+    console.log('handleSearch викликано з searchQuery:', searchQuery);
     if (searchQuery.trim()) {
       setSearchTerm(searchQuery);
       navigate(`/search?query=${encodeURIComponent(searchQuery)}`);
@@ -261,7 +289,7 @@ function Header({ setSearchTerm }) {
   };
 
   const handleClearSearch = () => {
-    console.log('handleClearSearch called');
+    console.log('handleClearSearch викликано');
     setSearchQuery('');
     if (searchInputRef.current) {
       console.log('Clearing input value');
@@ -289,7 +317,7 @@ function Header({ setSearchTerm }) {
   };
 
   const handleLinkClick = (path) => {
-    console.log('handleLinkClick called with path:', path);
+    console.log('handleLinkClick викликано з path:', path);
     setIsClosing(true);
     handleClearSearch();
     setTimeout(() => {
@@ -317,8 +345,14 @@ function Header({ setSearchTerm }) {
     setCitySearch('');
   };
 
-  const handleCitySelect = (cityName) => {
-    console.log('City selected:', cityName);
+  const handleCitySelect = useCallback((cityName) => {
+    console.log('handleCitySelect викликано з cityName:', cityName);
+    if (cityName === userLocation) {
+      console.log('Місто не змінилося, пропускаємо оновлення');
+      setShowCityPopup(false);
+      setCitySearch('');
+      return;
+    }
     if (cityName === 'За розташуванням') {
       fetchGeolocation();
     } else {
@@ -327,7 +361,7 @@ function Header({ setSearchTerm }) {
       setShowCityPopup(false);
       setCitySearch('');
     }
-  };
+  }, [userLocation, fetchGeolocation]);
 
   const filteredCities = citySearch
     ? cities.filter(city =>
@@ -339,20 +373,25 @@ function Header({ setSearchTerm }) {
       ].slice(0, 10);
 
   useEffect(() => {
+    console.log('useEffect для showText викликано');
     if (isResultsUpdated && !isLoading && searchResults.length > 0) {
       setShowText(false);
       const timer = setTimeout(() => {
         setShowText(true);
       }, 50);
-      return () => clearTimeout(timer);
+      return () => {
+        console.log('Очищення useEffect для showText');
+        clearTimeout(timer);
+      };
     } else {
       setShowText(false);
     }
   }, [isResultsUpdated, isLoading, searchResults]);
 
   useEffect(() => {
-    console.log('searchInputRef.current:', searchInputRef.current);
+    console.log('useEffect для searchInputRef викликано, searchInputRef.current:', searchInputRef.current);
     return () => {
+      console.log('Очищення useEffect для searchInputRef');
       setSearchResults([]);
       setShowResults(false);
       setIsLoading(false);
