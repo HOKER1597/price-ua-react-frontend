@@ -4,10 +4,13 @@ import axios from 'axios';
 import { useError } from './ErrorContext';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import 'leaflet.markercluster';
 import './ProductDetail.css';
 import './ProductList.css';
 
-// Виправлення проблеми з іконками Leaflet
+// Fix Leaflet icon issues
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -37,8 +40,11 @@ function ProductDetail() {
   const [isDragging, setIsDragging] = useState(false);
   const [citySearch, setCitySearch] = useState('');
   const [showCityPopup, setShowCityPopup] = useState(false);
+  const [activeMarkerId, setActiveMarkerId] = useState(null);
   const cityPopupRef = useRef(null);
-
+  const markerRefs = useRef({});
+  const fullScreenMarkerRefs = useRef({});
+  const prevActiveMarkerIdRef = useRef(null);
   const featuresRef = useRef(null);
   const descriptionRef = useRef(null);
   const storePricesRef = useRef(null);
@@ -46,228 +52,32 @@ function ProductDetail() {
   const mapContainerRef = useRef(null);
   const fullScreenMapRef = useRef(null);
   const fullScreenMapContainerRef = useRef(null);
-  const markersRef = useRef([]);
-  const fullScreenMarkersRef = useRef([]);
+  const clusterGroupRef = useRef(null);
+  const fullScreenClusterGroupRef = useRef(null);
 
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user')) || null;
   const isAdmin = user && user.is_admin;
   const userLocation = localStorage.getItem('userLocationStatus') || 'Виберіть місто';
 
-  const cityCoordinates = useMemo(() => ({
-    "Вінниця": [49.2331, 28.4682],
-    "Дніпро": [48.4647, 35.0462],
-    "Донецьк": [48.0159, 37.8028],
-    "Житомир": [50.2547, 28.6587],
-    "Запоріжжя": [47.8388, 35.1396],
-    "Івано-Франківськ": [48.9226, 24.7111],
-    "Кропивницький": [48.5079, 32.2605],
-    "Луганськ": [48.5679, 39.3105],
-    "Луцьк": [50.7463, 25.3355],
-    "Одеса": [46.4825, 30.7233],
-    "Черкаси": [49.4444, 32.0597],
-    "Чернівці": [48.2923, 25.9354],
-    "Чернігів": [51.4982, 31.2893],
-    "Біла Церква": [49.7927, 30.1126],
-    "Бердянськ": [46.7515, 36.7994],
-    "Бердичів": [49.8965, 28.5855],
-    "Болехів": [49.0588, 23.8600],
-    "Борислав": [49.2864, 23.4246],
-    "Бориспіль": [50.3543, 30.9562],
-    "Боярка": [50.3428, 30.2872],
-    "Бровари": [50.5048, 30.7146],
-    "Бурштин": [49.2500, 24.6167],
-    "Васильків": [50.1833, 30.3167],
-    "Вінники": [49.8167, 24.0333],
-    "Вишгород": [50.5833, 30.4833],
-    "Вишневе": [50.3925, 30.3667],
-    "Вознесенськ": [47.5667, 31.31610],
-    "Волноваха": [47.6000, 37.5167],
-    "Волочиськ": [49.2833, 26.1667],
-    "Володимир-Волинський": [50.8500, 24.3167],
-    "Вугледар": [47.7833, 37.2667],
-    "Гайсин": [48.8000, 29.4167],
-    "Гнівань": [49.1000, 28.3667],
-    "Гола Пристань": [46.5333, 32.5000],
-    "Голубівка": [48.3833, 38.9167],
-    "Горішні Плавні": [49.0167, 33.5667],
-    "Городенка": [48.6667, 25.5000],
-    "Городок": [49.1500, 27.2333],
-    "Гостомель": [50.5667, 30.2167],
-    "Дніпрорудне": [47.3833, 34.9833],
-    "Добропілля": [48.4500, 37.0833],
-    "Долина": [48.9667, 23.9500],
-    "Дрогобич": [49.3500, 23.5000],
-    "Дубляни": [49.9333, 24.2667],
-    "Дубно": [50.3833, 25.7500],
-    "Енергодар": [47.5000, 34.6333],
-    "Жмеринка": [49.0333, 28.1167],
-    "Жовква": [50.0667, 23.9667],
-    "Жовті Води": [48.3500, 33.5000],
-    "Заліщики": [48.6500, 25.7333],
-    "Збруч": [48.6167, 26.4833],
-    "Знам’янка": [48.7167, 32.6667],
-    "Золотоноша": [49.6833, 32.0333],
-    "Золочів": [49.8000, 24.9000],
-    "Ізюм": [49.2000, 37.2500],
-    "Іллінці": [49.1000, 29.2167],
-    "Ірпінь": [50.5167, 30.2167],
-    "Калуш": [49.0167, 24.3667],
-    "Кам’янець-Подільський": [48.6833, 26.5833],
-    "Кам’янка": [49.0333, 32.0833],
-    "Канів": [49.7500, 31.4833],
-    "Карлівка": [49.4333, 35.1333],
-    "Каховка": [46.8167, 33.4833],
-    "Керч": [45.3563, 36.4740],
-    "Київ": [50.4501, 30.5234],
-    "Кіровоград": [48.5079, 32.2605],
-    "Ковель": [51.2167, 24.7000],
-    "Козятин": [49.7167, 28.8167],
-    "Коломия": [48.5333, 25.0333],
-    "Копичинці": [48.8333, 25.8500],
-    "Коростень": [50.9667, 28.6500],
-    "Коростишів": [50.3167, 29.0500],
-    "Косів": [48.3167, 25.1000],
-    "Костопіль": [50.8833, 26.5333],
-    "Краматорськ": [48.7333, 37.6000],
-    "Красилів": [49.6500, 26.9667],
-    "Кременчук": [49.0833, 33.4167],
-    "Кролевець": [51.5333, 33.3833],
-    "Кузнецовськ": [51.3167, 25.8500],
-    "Куп’янськ": [49.7167, 37.6167],
-    "Ладижин": [48.6833, 29.2333],
-    "Ланівці": [49.8500, 26.0833],
-    "Лебедин": [50.6000, 34.4833],
-    "Лиман": [48.9833, 37.6167],
-    "Липовець": [49.2333, 29.0833],
-    "Лисичанськ": [48.9000, 38.4333],
-    "Лозова": [48.8833, 36.3167],
-    "Лубни": [50.0167, 32.9833],
-    "Лутугине": [48.4000, 39.2167],
-    "Львів": [49.8397, 24.0297],
-    "Макіївка": [48.0500, 37.9833],
-    "Малин": [50.7667, 29.2333],
-    "Марганець": [47.6333, 34.6333],
-    "Маріуполь": [47.0951, 37.5538],
-    "Мелітополь": [46.8500, 35.3667],
-    "Мена": [51.5667, 32.0833],
-    "Миколаїв": [46.9750, 31.9946],
-    "Мирноград": [48.3000, 37.2667],
-    "Миронівка": [49.6667, 30.6167],
-    "Могилів-Подільський": [48.4500, 27.7833],
-    "Молочанськ": [47.2000, 35.5833],
-    "Монастириська": [49.0833, 25.1667],
-    "Мостиська": [49.8000, 23.1500],
-    "Мукачево": [48.4333, 22.7167],
-    "Надвірна": [48.6333, 24.5833],
-    "Ніжин": [51.5167, 31.8833],
-    "Нікополь": [47.5667, 34.4000],
-    "Нова Каховка": [46.7500, 33.3667],
-    "Нова Одеса": [46.7500, 31.7500],
-    "Новий Буг": [47.6833, 32.5333],
-    "Новоазовськ": [47.1167, 38.7500],
-    "Новоукраїнка": [48.3167, 31.5167],
-    "Носівка": [50.6167, 31.5167],
-    "Обухів": [50.1000, 30.6167],
-    "Овруч": [51.3333, 28.8000],
-    "Олевськ": [51.0500, 27.6667],
-    "Олександрія": [48.6667, 33.1167],
-    "Олександрівськ": [47.9500, 33.2833],
-    "Олешки": [46.6333, 32.6167],
-    "Острог": [50.3333, 26.5167],
-    "Павлоград": [48.5333, 35.8667],
-    "Первомайськ": [50.3167, 31.5167],
-    "Перевальськ": [48.4333, 38.8333],
-    "Перемишляни": [49.6500, 24.5833],
-    "Переяслав": [50.0500, 31.4500],
-    "Пирятин": [50.2500, 32.5167],
-    "Покров": [47.6167, 33.5167],
-    "Покровськ": [48.2833, 37.1667],
-    "Полонне": [50.1167, 27.5167],
-    "Полтава": [49.5883, 34.5514],
-    "Помічна": [48.6167, 31.6167],
-    "Прилуки": [50.5833, 32.3833],
-    "Пустомити": [49.7167, 23.8833],
-    "Радехів": [50.2833, 24.6333],
-    "Радомишль": [50.4833, 29.2333],
-    "Рені": [45.4500, 28.2833],
-    "Ржищів": [50.0333, 30.9667],
-    "Рівне": [50.6199, 26.2516],
-    "Рогатин": [49.4167, 24.6167],
-    "Рожище": [50.9167, 25.2667],
-    "Сарни": [51.3333, 26.5833],
-    "Свалява": [48.5500, 22.9833],
-    "Сватове": [49.4167, 38.1500],
-    "Світловодськ": [49.0500, 33.2333],
-    "Сєвєродонецьк": [48.9333, 38.4833],
-    "Семенівка": [51.3333, 32.6000],
-    "Середина-Буда": [51.7500, 33.9833],
-    "Синельникове": [48.3167, 35.4833],
-    "Славута": [50.3000, 26.8667],
-    "Славутич": [51.5167, 30.7500],
-    "Смела": [49.1833, 31.8667],
-    "Снігурівка": [47.0833, 32.7667],
-    "Сокаль": [50.4833, 23.9833],
-    "Сокиряни": [48.4500, 27.4167],
-    "Соледар": [48.6833, 38.1000],
-    "Сорокине": [48.1500, 39.6167],
-    "Старобільськ": [49.2833, 38.9167],
-    "Старокостянтинів": [49.7500, 27.2167],
-    "Стебник": [49.2833, 23.5667],
-    "Стрий": [49.2500, 23.8500],
-    "Судак": [44.8500, 34.9667],
-    "Суми": [50.9077, 34.7981],
-    "Таврійськ": [46.7667, 33.3833],
-    "Талалаївка": [50.6833, 33.1833],
-    "Тальне": [48.8833, 29.9833],
-    "Тараща": [49.5667, 30.4833],
-    "Тернопіль": [49.5535, 25.5948],
-    "Тетіїв": [49.3833, 29.6167],
-    "Тисмениця": [48.9000, 24.8500],
-    "Тлумач": [48.8667, 24.9833],
-    "Токмак": [47.2500, 35.6667],
-    "Тростянець": [50.4833, 34.9667],
-    "Трускавець": [49.2833, 23.5000],
-    "Тульчин": [48.6667, 28.8500],
-    "Угледар": [47.7833, 37.2667],
-    "Ужгород": [48.6208, 22.2879],
-    "Умань": [48.7500, 30.2167],
-    "Фастів": [50.0833, 29.9167],
-    "Феодосія": [45.0333, 35.3667],
-    "Харків": [49.9935, 36.2304],
-    "Херсон": [46.6558, 32.6178],
-    "Хмельницький": [49.4216, 26.9918],
-    "Хмільник": [49.5667, 27.9667],
-    "Ходорів": [49.1667, 24.3167],
-    "Хотин": [48.5167, 26.4833],
-    "Хрестівка": [48.0500, 37.3167],
-    "Христинівка": [48.7833, 29.9667],
-    "Хрустальний": [48.1167, 38.9333],
-    "Часів Яр": [48.6000, 37.8500],
-    "Червоноград": [50.3833, 24.2167],
-    "Чекалин": [49.2333, 28.5833],
-    "Чигирин": [49.0833, 32.6500],
-    "Чоп": [48.4333, 22.2000],
-    "Чортків": [49.0167, 25.8000],
-    "Чугуїв": [50.5833, 36.6833],
-    "Шепетівка": [50.1833, 27.0667],
-    "Шостка": [51.8667, 33.4667],
-    "Шумськ": [50.2833, 26.0833],
-    "Щастя": [48.7333, 39.2333],
-    "Южне": [46.6167, 30.9833],
-    "Яворів": [49.9333, 23.3833],
-    "Яготин": [50.2500, 31.7667],
-    "Ямпіль": [48.2500, 29.0833],
-    "Яремче": [48.4500, 24.5500],
-  }), []);
+  // Generate cityCoordinates dynamically from data.cities
+  const cityCoordinates = useMemo(() => {
+    const coords = {};
+    data.cities.forEach(city => {
+      if (city.latitude && city.longitude) {
+        coords[city.name_ua] = [parseFloat(city.latitude), parseFloat(city.longitude)];
+      }
+    });
+    return coords;
+  }, [data.cities]);
 
-  // Топ-10 найбільших міст України, з останнім як "За розташуванням"
+  // Top 10 cities in Ukraine, with the last as "By location"
   const topCities = [
     'Київ', 'Харків', 'Одеса', 'Дніпро', 'Херсон',
     'Запоріжжя', 'Львів', 'Кривий Ріг', 'Миколаїв', 'За розташуванням'
   ];
 
-  // Функція для отримання початкових даних
+  // Fetch initial data
   const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
     clearError();
@@ -309,7 +119,7 @@ function ProductDetail() {
     fetchInitialData();
   }, [fetchInitialData]);
 
-  // Перевірка статусу збереження товару
+  // Check saved status
   const checkSavedStatus = useCallback(async () => {
     if (!token) {
       setIsSaved(false);
@@ -332,9 +142,9 @@ function ProductDetail() {
     }
   }, [checkSavedStatus, isLoading, error, data.product]);
 
-  // Отримання координат за замовчуванням для мапи
+  // Get default coordinates for map
   const getDefaultCoordinates = useCallback(async () => {
-    let coords = [50.4501, 30.5234]; // За замовчуванням Київ
+    let coords = [50.4501, 30.5234]; // Default to Kyiv
     let zoom = 14;
 
     if (userLocation && userLocation !== 'Виберіть місто' && userLocation !== 'denied') {
@@ -373,7 +183,42 @@ function ProductDetail() {
     return { coords, zoom };
   }, [userLocation, cityCoordinates]);
 
-  // Ініціалізація вбудованої мапи
+  // Update marker icon
+  const updateMarkerIcon = useCallback((marker, markerId, storePrice, isActive) => {
+    marker.setIcon(L.divIcon({
+      html: `<div class="custom-price-label ${isActive ? 'active' : ''}" title="Ціна: ${storePrice} грн">${storePrice} грн</div>`,
+      className: '',
+      iconSize: [100, 30],
+      iconAnchor: [50, 45],
+    }));
+  }, []);
+
+  // Create markers for a cluster group
+  const createMarkers = useCallback((clusterGroup, markerRefs, storeLocations, product, activeMarkerId, setActiveMarkerId, updateMarkerIcon) => {
+    storeLocations.forEach((storeLocation, index) => {
+      const storePrice = product.store_prices?.find(sp => sp.name === storeLocation.store_name)?.price || 'Н/Д';
+      const markerId = `${storeLocation.store_name}_${storeLocation.latitude}_${storeLocation.longitude}_${index}`;
+      const marker = L.marker([storeLocation.latitude, storeLocation.longitude], {
+        icon: L.divIcon({
+          html: `<div class="custom-price-label ${activeMarkerId === markerId ? 'active' : ''}" title="Ціна: ${storePrice} грн">${storePrice} грн</div>`,
+          className: '',
+          iconSize: [100, 30],
+          iconAnchor: [50, 45],
+        }),
+      });
+
+      markerRefs.current[markerId] = marker;
+
+      marker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        setActiveMarkerId(prev => prev === markerId ? null : markerId); // Toggle active state
+      });
+
+      clusterGroup.addLayer(marker);
+    });
+  }, []);
+
+  // Initialize inline map with clustering
   const initializeInlineMap = useCallback(async () => {
     if (!mapContainerRef.current) {
       console.error('Контейнер вбудованої мапи не знайдено');
@@ -415,33 +260,28 @@ function ProductDetail() {
         setTimeout(() => setIsDragging(false), 100);
       });
 
-      // Додавання маркерів
-      markersRef.current.forEach(marker => marker.remove());
-      markersRef.current = [];
+      if (clusterGroupRef.current) {
+        clusterGroupRef.current.remove();
+      }
+      clusterGroupRef.current = L.markerClusterGroup({
+        maxClusterRadius: 30,
+        iconCreateFunction: function (cluster) {
+          const count = cluster.getChildCount();
+          return L.divIcon({
+            html: `<div class="cluster-icon">${count}</div>`,
+            className: 'custom-cluster',
+            iconSize: L.point(40, 40),
+          });
+        },
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+      });
+
+      markerRefs.current = {};
 
       if (data.storeLocations.length > 0) {
-        markersRef.current = data.storeLocations.map(storeLocation => {
-          const marker = L.marker([storeLocation.latitude, storeLocation.longitude], {
-            icon: L.icon({
-              iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-              iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-              shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-              iconSize: [25, 41],
-              iconAnchor: [12, 41],
-              popupAnchor: [1, -34],
-              shadowSize: [41, 41],
-            }),
-          }).addTo(mapRef.current);
-
-          marker.bindTooltip(storeLocation.store_name, {
-            permanent: true,
-            direction: 'top',
-            offset: [0, -40],
-            className: 'store-label',
-          });
-
-          return marker;
-        });
+        createMarkers(clusterGroupRef.current, markerRefs, data.storeLocations, data.product, activeMarkerId, setActiveMarkerId, updateMarkerIcon);
+        mapRef.current.addLayer(clusterGroupRef.current);
 
         const cityStoreLocations = data.storeLocations.filter(storeLocation => {
           const R = 6371;
@@ -480,9 +320,10 @@ function ProductDetail() {
       console.error('Не вдалося ініціалізувати вбудовану мапу:', err);
       setError('Не вдалося ініціалізувати мапу.');
     }
-  }, [setError, data.storeLocations, userLocation, getDefaultCoordinates]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setError, data.storeLocations, data.product, userLocation, getDefaultCoordinates, createMarkers, updateMarkerIcon, setActiveMarkerId]);
 
-  // Ініціалізація вбудованої мапи лише один раз при монтуванні
+  // Initialize inline map only once on mount
   useEffect(() => {
     if (!isLoading && !error && data.product) {
       initializeInlineMap();
@@ -495,25 +336,16 @@ function ProductDetail() {
         mapRef.current.off('dragend');
         mapRef.current.remove();
         mapRef.current = null;
-        markersRef.current.forEach(marker => marker.remove());
-        markersRef.current = [];
+        if (clusterGroupRef.current) {
+          clusterGroupRef.current.remove();
+          clusterGroupRef.current = null;
+        }
+        markerRefs.current = {};
       }
     };
   }, [isLoading, error, data.product, initializeInlineMap]);
 
-  // Обробка кліків поза попапом міста
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (cityPopupRef.current && !cityPopupRef.current.contains(event.target) && !event.target.classList.contains('city-search-input')) {
-        setShowCityPopup(false);
-        setCitySearch('');
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Ініціалізація повноекранної мапи
+  // Initialize fullscreen map with clustering
   const initializeFullScreenMap = useCallback(async () => {
     if (!fullScreenMapContainerRef.current) {
       console.error('Контейнер повноекранної мапи не знайдено');
@@ -546,32 +378,28 @@ function ProductDetail() {
         setError('Помилка завантаження мапи.');
       });
 
-      fullScreenMarkersRef.current.forEach(marker => marker.remove());
-      fullScreenMarkersRef.current = [];
+      if (fullScreenClusterGroupRef.current) {
+        fullScreenClusterGroupRef.current.remove();
+      }
+      fullScreenClusterGroupRef.current = L.markerClusterGroup({
+        maxClusterRadius: 30,
+        iconCreateFunction: function (cluster) {
+          const count = cluster.getChildCount();
+          return L.divIcon({
+            html: `<div class="cluster-icon">${count}</div>`,
+            className: 'custom-cluster',
+            iconSize: L.point(40, 40),
+          });
+        },
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+      });
+
+      fullScreenMarkerRefs.current = {};
 
       if (data.storeLocations.length > 0) {
-        fullScreenMarkersRef.current = data.storeLocations.map(storeLocation => {
-          const marker = L.marker([storeLocation.latitude, storeLocation.longitude], {
-            icon: L.icon({
-              iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-              iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-              shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-              iconSize: [25, 41],
-              iconAnchor: [12, 41],
-              popupAnchor: [1, -34],
-              shadowSize: [41, 41],
-            }),
-          }).addTo(fullScreenMapRef.current);
-
-          marker.bindTooltip(storeLocation.store_name, {
-            permanent: true,
-            direction: 'top',
-            offset: [0, -40],
-            className: 'store-label',
-          });
-
-          return marker;
-        });
+        createMarkers(fullScreenClusterGroupRef.current, fullScreenMarkerRefs, data.storeLocations, data.product, activeMarkerId, setActiveMarkerId, updateMarkerIcon);
+        fullScreenMapRef.current.addLayer(fullScreenClusterGroupRef.current);
 
         const cityStoreLocations = data.storeLocations.filter(storeLocation => {
           const R = 6371;
@@ -607,13 +435,75 @@ function ProductDetail() {
       console.error('Не вдалося ініціалізувати повноекранну мапу:', err);
       setError('Не вдалося завантажити повноекранну мапу.');
     }
-  }, [setError, data.storeLocations, getDefaultCoordinates]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setError, data.storeLocations, data.product, getDefaultCoordinates, createMarkers, updateMarkerIcon, setActiveMarkerId]);
 
-  // Обробка вибору міста на повноекранній мапі
-  const handleCitySelect = async (cityName) => {
+  // Update marker icons when activeMarkerId changes
+  useEffect(() => {
+    const prevActiveMarkerId = prevActiveMarkerIdRef.current;
+
+    // Deactivate previous marker
+    if (prevActiveMarkerId && markerRefs.current[prevActiveMarkerId]) {
+      const prevStore = data.storeLocations.find((loc, idx) =>
+        `${loc.store_name}_${loc.latitude}_${loc.longitude}_${idx}` === prevActiveMarkerId
+      );
+      const prevPrice = prevStore
+        ? data.product.store_prices?.find(sp => sp.name === prevStore.store_name)?.price || 'Н/Д'
+        : 'Н/Д';
+      updateMarkerIcon(markerRefs.current[prevActiveMarkerId], prevActiveMarkerId, prevPrice, false);
+    }
+    if (prevActiveMarkerId && fullScreenMarkerRefs.current[prevActiveMarkerId]) {
+      const prevStore = data.storeLocations.find((loc, idx) =>
+        `${loc.store_name}_${loc.latitude}_${loc.longitude}_${idx}` === prevActiveMarkerId
+      );
+      const prevPrice = prevStore
+        ? data.product.store_prices?.find(sp => sp.name === prevStore.store_name)?.price || 'Н/Д'
+        : 'Н/Д';
+      updateMarkerIcon(fullScreenMarkerRefs.current[prevActiveMarkerId], prevActiveMarkerId, prevPrice, false);
+    }
+
+    // Activate current marker
+    if (activeMarkerId && markerRefs.current[activeMarkerId]) {
+      const currentStore = data.storeLocations.find((loc, idx) =>
+        `${loc.store_name}_${loc.latitude}_${loc.longitude}_${idx}` === activeMarkerId
+      );
+      const currentPrice = currentStore
+        ? data.product.store_prices?.find(sp => sp.name === currentStore.store_name)?.price || 'Н/Д'
+        : 'Н/Д';
+      updateMarkerIcon(markerRefs.current[activeMarkerId], activeMarkerId, currentPrice, true);
+    }
+    if (activeMarkerId && fullScreenMarkerRefs.current[activeMarkerId]) {
+      const currentStore = data.storeLocations.find((loc, idx) =>
+        `${loc.store_name}_${loc.latitude}_${loc.longitude}_${idx}` === activeMarkerId
+      );
+      const currentPrice = currentStore
+        ? data.product.store_prices?.find(sp => sp.name === currentStore.store_name)?.price || 'Н/Д'
+        : 'Н/Д';
+      updateMarkerIcon(fullScreenMarkerRefs.current[activeMarkerId], activeMarkerId, currentPrice, true);
+    }
+
+    // Update previous marker ID
+    prevActiveMarkerIdRef.current = activeMarkerId;
+
+  }, [activeMarkerId, data.storeLocations, data.product, updateMarkerIcon]);
+
+  // Handle clicks outside city popup
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (cityPopupRef.current && !cityPopupRef.current.contains(event.target) && !event.target.classList.contains('city-search-input')) {
+        setShowCityPopup(false);
+        setCitySearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Handle city selection on fullscreen map
+  const handleCitySelect = useCallback(async (cityName) => {
     if (!fullScreenMapRef.current) return;
 
-    let coords = [50.4501, 30.5234]; // За замовчуванням Київ
+    let coords = [50.4501, 30.5234]; // Default to Kyiv
     let zoom = 14;
 
     if (cityName === 'За розташуванням') {
@@ -656,39 +546,34 @@ function ProductDetail() {
       }
     }
 
-    // Анімація переміщення мапи
     fullScreenMapRef.current.flyTo(coords, zoom, {
       animate: true,
       duration: 1,
     });
 
-    // Оновлення маркерів
-    fullScreenMarkersRef.current.forEach(marker => marker.remove());
-    fullScreenMarkersRef.current = [];
+    if (fullScreenClusterGroupRef.current) {
+      fullScreenClusterGroupRef.current.clearLayers();
+    } else {
+      fullScreenClusterGroupRef.current = L.markerClusterGroup({
+        maxClusterRadius: 30,
+        iconCreateFunction: function (cluster) {
+          const count = cluster.getChildCount();
+          return L.divIcon({
+            html: `<div class="cluster-icon">${count}</div>`,
+            className: 'custom-cluster',
+            iconSize: L.point(40, 40),
+          });
+        },
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+      });
+    }
+
+    fullScreenMarkerRefs.current = {};
 
     if (data.storeLocations.length > 0) {
-      fullScreenMarkersRef.current = data.storeLocations.map(storeLocation => {
-        const marker = L.marker([storeLocation.latitude, storeLocation.longitude], {
-          icon: L.icon({
-            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-            iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41],
-          }),
-        }).addTo(fullScreenMapRef.current);
-
-        marker.bindTooltip(storeLocation.store_name, {
-          permanent: true,
-          direction: 'top',
-          offset: [0, -40],
-          className: 'store-label',
-        });
-
-        return marker;
-      });
+      createMarkers(fullScreenClusterGroupRef.current, fullScreenMarkerRefs, data.storeLocations, data.product, activeMarkerId, setActiveMarkerId, updateMarkerIcon);
+      fullScreenMapRef.current.addLayer(fullScreenClusterGroupRef.current);
 
       const cityStoreLocations = data.storeLocations.filter(storeLocation => {
         const R = 6371;
@@ -715,7 +600,7 @@ function ProductDetail() {
 
     setShowCityPopup(false);
     setCitySearch('');
-  };
+  }, [setError, data.storeLocations, data.product, activeMarkerId, cityCoordinates, createMarkers, updateMarkerIcon, setActiveMarkerId]);
 
   const filteredCities = citySearch
     ? data.cities.filter(city =>
@@ -738,8 +623,11 @@ function ProductDetail() {
         console.log('Очищення повноекранної мапи');
         fullScreenMapRef.current.remove();
         fullScreenMapRef.current = null;
-        fullScreenMarkersRef.current.forEach(marker => marker.remove());
-        fullScreenMarkersRef.current = [];
+        if (fullScreenClusterGroupRef.current) {
+          fullScreenClusterGroupRef.current.remove();
+          fullScreenClusterGroupRef.current = null;
+        }
+        fullScreenMarkerRefs.current = {};
       }
     };
   }, [isMapFullScreen, initializeFullScreenMap]);
