@@ -443,15 +443,75 @@
 
 .fullscreen-map-content {
   position: relative;
-  max-width: 90%;
-  max-height: 90%;
+  max-width: calc(100% - 30px);
+  max-height: calc(100% - 30px);
   width: 100%;
   height: 100%;
+  margin: 15px;
+  display: flex;
 }
 
 .fullscreen-map {
-  width: 100%;
+  width: calc(100% - 340px);
   height: 100%;
+  margin-left: 340px;
+}
+
+.filter-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 300px;
+  height: 640px;
+  background-color: #ff69b4;
+  padding: 20px;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+.filter-panel h3 {
+  font-size: 18px;
+  color: #fff;
+  margin-bottom: 15px;
+}
+
+.filter-items {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  color: #333;
+  cursor: pointer;
+  flex-wrap: nowrap;
+}
+
+.filter-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+}
+
+.filter-checkbox .filter-label {
+  display: inline-block;
+  white-space: normal;
+  word-break: break-word;
+  color: #333;
+}
+
+.filter-checkbox.disabled {
+  color: #999;
+  cursor: not-allowed;
+}
+
+.filter-checkbox input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .close-fullscreen-map {
@@ -488,9 +548,8 @@
   outline: none;
   transition: border-color 0.3s ease;
   position: absolute;
-  top: 0;
-  left: 100px;
-  right: 0;
+  top: 15px;
+  left: 400px;
   z-index: 1001;
 }
 
@@ -500,9 +559,8 @@
 
 .city-map-popup {
   position: absolute;
-  top: 32px;
-  left: 100px;
-  right: 0;
+  top: 47px;
+  left: 400px;
   width: 425px;
   background-color: rgba(255, 255, 255, 0.95);
   border: 1px solid #ccc;
@@ -798,11 +856,11 @@
 }
 
 .fullscreen-prev {
-  left: -60px;
+  left: -100px;
 }
 
 .fullscreen-next {
-  right: -60px;
+  right: -100px;
 }
 
 .close-fullscreen {
@@ -816,29 +874,35 @@
   cursor: pointer;
 }
 
+/* Leaflet zoom control */
+.leaflet-control-zoom {
+  margin-top: 10px;
+  margin-left: 320px;
+}
+
 /* Custom price label for map markers */
 .custom-price-label {
-  background-color: rgba(255, 105, 180, 0.5); /* Pink with 50% transparency */
+  background-color: rgba(255, 105, 180, 0.5);
   color: white;
-  font-size: 12px; /* Increased font size */
+  font-size: 12px;
   font-weight: bold;
   text-align: center;
   padding: 2px 5px;
   border-radius: 3px;
   width: 50px;
-  height: 20px; /* Increased height */
-  line-height: 16px; /* Adjusted to center text vertically */
+  height: 20px;
+  line-height: 16px;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.3s ease, transform 0.3s ease; /* Smooth transition for background and scale */
+  transition: background-color 0.3s ease;
 }
 
 .custom-price-label.active {
-  background-color: rgb(255, 105, 180); /* Fully opaque pink */
-  animation: pricePulse 0.3s ease-in-out; /* Animation when becoming active */
-  transform: scale(1.1); /* Slightly scale up when active */
+  background-color: rgb(255, 105, 180);
+  animation: pricePulse 0.3s ease-in-out;
+  transform: scale(1.1);
 }
 
 @keyframes pricePulse {
@@ -847,28 +911,19 @@
   100% { transform: scale(1.1); }
 }
 
-.custom-price-label:not(.active) {
-  animation: priceFadeBack 0.3s ease-in-out; /* Animation when becoming inactive */
-}
-
-@keyframes priceFadeBack {
-  0% { transform: scale(1.1); }
-  100% { transform: scale(1); }
-}
-
 .custom-price-label::after {
   content: '';
   position: absolute;
-  bottom: -29px; /* Adjusted to account for larger triangle */
+  bottom: -29px;
   left: 50%;
   transform: translateX(-50%);
-  border: 15px solid transparent; /* Increased size (5x original 3px) */
-  border-top-color: rgba(255, 105, 180, 0.5); /* Pink with 50% transparency */
-  transition: border-top-color 0.3s ease; /* Smooth transition for triangle */
+  border: 15px solid transparent;
+  border-top-color: rgba(255, 105, 180, 0.5);
+  transition: border-top-color 0.3s ease;
 }
 
 .custom-price-label.active::after {
-  border-top-color: rgb(255, 105, 180); /* Fully opaque pink for triangle */
+  border-top-color: rgb(255, 105, 180);
 }
 
 /* Спінер і затемнення */

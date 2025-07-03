@@ -41,6 +41,12 @@ function ProductDetail() {
   const [citySearch, setCitySearch] = useState('');
   const [showCityPopup, setShowCityPopup] = useState(false);
   const [activeMarkerId, setActiveMarkerId] = useState(null);
+  const [selectedFilters, setSelectedFilters] = useState({
+    stores: [], // Initialize as empty to show all stores by default
+  });
+  const [disabledFilters, setDisabledFilters] = useState({
+    stores: [],
+  });
   const cityPopupRef = useRef(null);
   const markerRefs = useRef({});
   const fullScreenMarkerRefs = useRef({});
@@ -54,22 +60,32 @@ function ProductDetail() {
   const fullScreenMapContainerRef = useRef(null);
   const clusterGroupRef = useRef(null);
   const fullScreenClusterGroupRef = useRef(null);
+  const mapStateRef = useRef({ center: null, zoom: null });
+  const isInlineMapInitialized = useRef(false);
+  const isFullScreenMapInitialized = useRef(false);
 
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user')) || null;
   const isAdmin = user && user.is_admin;
   const userLocation = localStorage.getItem('userLocationStatus') || 'Виберіть місто';
 
+  // Stabilize data references
+  const stableData = useMemo(() => ({
+    product: data.product,
+    storeLocations: data.storeLocations,
+    cities: data.cities,
+  }), [data.product, data.storeLocations, data.cities]);
+
   // Generate cityCoordinates dynamically from data.cities
   const cityCoordinates = useMemo(() => {
     const coords = {};
-    data.cities.forEach(city => {
+    stableData.cities.forEach(city => {
       if (city.latitude && city.longitude) {
         coords[city.name_ua] = [parseFloat(city.latitude), parseFloat(city.longitude)];
       }
     });
     return coords;
-  }, [data.cities]);
+  }, [stableData.cities]);
 
   // Top 10 cities in Ukraine, with the last as "By location"
   const topCities = [
@@ -137,15 +153,15 @@ function ProductDetail() {
   }, [productId, token, setError]);
 
   useEffect(() => {
-    if (!isLoading && !error && data.product) {
+    if (!isLoading && !error && stableData.product) {
       checkSavedStatus();
     }
-  }, [checkSavedStatus, isLoading, error, data.product]);
+  }, [checkSavedStatus, isLoading, error, stableData.product]);
 
   // Get default coordinates for map
   const getDefaultCoordinates = useCallback(async () => {
     let coords = [50.4501, 30.5234]; // Default to Kyiv
-    let zoom = 14;
+    let zoom = 12;
 
     if (userLocation && userLocation !== 'Виберіть місто' && userLocation !== 'denied') {
       if (userLocation in cityCoordinates) {
@@ -193,46 +209,142 @@ function ProductDetail() {
     }));
   }, []);
 
-  // Create markers for a cluster group
-  const createMarkers = useCallback((clusterGroup, markerRefs, storeLocations, product, activeMarkerId, setActiveMarkerId, updateMarkerIcon) => {
-    storeLocations.forEach((storeLocation, index) => {
+  // Update only the active and previous marker icons
+  const updateActiveMarkerIcons = useCallback((prevActiveMarkerId, newActiveMarkerId, markerRefs, fullScreenMarkerRefs, storeLocations, product) => {
+    if (prevActiveMarkerId && markerRefs.current[prevActiveMarkerId]) {
+      const prevStore = storeLocations.find((loc, idx) =>
+        `${loc.store_name}_${loc.latitude}_${loc.longitude}_${idx}` === prevActiveMarkerId
+      );
+      const prevPrice = prevStore
+        ? product.store_prices?.find(sp => sp.name === prevStore.store_name)?.price || 'Н/Д'
+        : 'Н/Д';
+      updateMarkerIcon(markerRefs.current[prevActiveMarkerId], prevActiveMarkerId, prevPrice, false);
+    }
+
+    if (newActiveMarkerId && markerRefs.current[newActiveMarkerId]) {
+      const currentStore = storeLocations.find((loc, idx) =>
+        `${loc.store_name}_${loc.latitude}_${loc.longitude}_${idx}` === newActiveMarkerId
+      );
+      const currentPrice = currentStore
+        ? product.store_prices?.find(sp => sp.name === currentStore.store_name)?.price || 'Н/Д'
+        : 'Н/Д';
+      updateMarkerIcon(markerRefs.current[newActiveMarkerId], newActiveMarkerId, currentPrice, true);
+    }
+
+    if (prevActiveMarkerId && fullScreenMarkerRefs.current[prevActiveMarkerId]) {
+      const prevStore = storeLocations.find((loc, idx) =>
+        `${loc.store_name}_${loc.latitude}_${loc.longitude}_${idx}` === prevActiveMarkerId
+      );
+      const prevPrice = prevStore
+        ? product.store_prices?.find(sp => sp.name === prevStore.store_name)?.price || 'Н/Д'
+        : 'Н/Д';
+      updateMarkerIcon(fullScreenMarkerRefs.current[prevActiveMarkerId], prevActiveMarkerId, prevPrice, false);
+    }
+
+    if (newActiveMarkerId && fullScreenMarkerRefs.current[newActiveMarkerId]) {
+      const currentStore = storeLocations.find((loc, idx) =>
+        `${loc.store_name}_${loc.latitude}_${loc.longitude}_${idx}` === newActiveMarkerId
+      );
+      const currentPrice = currentStore
+        ? product.store_prices?.find(sp => sp.name === currentStore.store_name)?.price || 'Н/Д'
+        : 'Н/Д';
+      updateMarkerIcon(fullScreenMarkerRefs.current[newActiveMarkerId], newActiveMarkerId, currentPrice, true);
+    }
+  }, [updateMarkerIcon]);
+
+  // Create or update markers for a cluster group
+  const createMarkers = useCallback((clusterGroup, markerRefs, storeLocations, product, activeMarkerId, setActiveMarkerId, selectedFilters, mapRef, isInitial = false) => {
+    console.log('Виклик createMarkers:', {
+      storeLocationsLength: storeLocations.length,
+      product: product?.id,
+      selectedFilters: selectedFilters.stores,
+      map: mapRef.current ? 'initialized' : 'not initialized',
+      isInitial
+    });
+
+    const filteredLocations = selectedFilters.stores.length > 0
+      ? storeLocations.filter(loc => selectedFilters.stores.includes(loc.store_name))
+      : storeLocations;
+
+    console.log('Відфільтровані локації:', filteredLocations.length);
+
+    const currentMarkerIds = Object.keys(markerRefs.current);
+    const newMarkerIds = filteredLocations.map((storeLocation, index) => 
+      `${storeLocation.store_name}_${storeLocation.latitude}_${storeLocation.longitude}_${index}`
+    );
+
+    currentMarkerIds.forEach(markerId => {
+      if (!newMarkerIds.includes(markerId)) {
+        clusterGroup.removeLayer(markerRefs.current[markerId]);
+        delete markerRefs.current[markerId];
+        console.log(`Видалено маркер: ${markerId}`);
+      }
+    });
+
+    filteredLocations.forEach((storeLocation, index) => {
       const storePrice = product.store_prices?.find(sp => sp.name === storeLocation.store_name)?.price || 'Н/Д';
       const markerId = `${storeLocation.store_name}_${storeLocation.latitude}_${storeLocation.longitude}_${index}`;
-      const marker = L.marker([storeLocation.latitude, storeLocation.longitude], {
-        icon: L.divIcon({
-          html: `<div class="custom-price-label ${activeMarkerId === markerId ? 'active' : ''}" title="Ціна: ${storePrice} грн">${storePrice} грн</div>`,
-          className: '',
-          iconSize: [100, 30],
-          iconAnchor: [50, 45],
-        }),
-      });
+      
+      console.log(`Створення/оновлення маркера: ${markerId}, ціна: ${storePrice}`);
 
-      markerRefs.current[markerId] = marker;
+      if (!markerRefs.current[markerId]) {
+        const marker = L.marker([storeLocation.latitude, storeLocation.longitude], {
+          icon: L.divIcon({
+            html: `<div class="custom-price-label ${activeMarkerId === markerId ? 'active' : ''}" title="Ціна: ${storePrice} грн">${storePrice} грн</div>`,
+            className: '',
+            iconSize: [100, 30],
+            iconAnchor: [50, 45],
+          }),
+        });
 
-      marker.on('click', (e) => {
-        L.DomEvent.stopPropagation(e);
-        setActiveMarkerId(prev => prev === markerId ? null : markerId); // Toggle active state
-      });
+        marker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          setActiveMarkerId(prev => prev === markerId ? null : markerId);
+          if (mapRef.current) {
+            mapRef.current.panTo([storeLocation.latitude, storeLocation.longitude], { animate: true, duration: 0.5 });
+          }
+          if (fullScreenMapRef.current) {
+            fullScreenMapRef.current.panTo([storeLocation.latitude, storeLocation.longitude], { animate: true, duration: 0.5 });
+          }
+          console.log(`Клік по маркеру: ${markerId}`);
+        });
 
-      clusterGroup.addLayer(marker);
+        markerRefs.current[markerId] = marker;
+        clusterGroup.addLayer(marker);
+        console.log(`Додано новий маркер: ${markerId}`);
+      } else {
+        updateMarkerIcon(markerRefs.current[markerId], markerId, storePrice, activeMarkerId === markerId);
+        console.log(`Оновлено маркер: ${markerId}`);
+      }
     });
-  }, []);
 
-  // Initialize inline map with clustering
+    if (mapRef.current && isInitial) {
+      if (mapStateRef.current.center && mapStateRef.current.zoom) {
+        mapRef.current.setView(mapStateRef.current.center, mapStateRef.current.zoom);
+        console.log('Відновлено стан мапи:', { center: mapStateRef.current.center, zoom: mapStateRef.current.zoom });
+      } else if (filteredLocations.length > 0) {
+        const bounds = L.latLngBounds(filteredLocations.map(loc => [loc.latitude, loc.longitude]));
+        mapRef.current.fitBounds(bounds, { padding: [20, 20], maxZoom: 10 });
+        console.log('Встановлено межі для маркерів:', bounds);
+      }
+    }
+  }, [updateMarkerIcon]);
+
+  // Initialize inline map
   const initializeInlineMap = useCallback(async () => {
     if (!mapContainerRef.current) {
       console.error('Контейнер вбудованої мапи не знайдено');
       return;
     }
 
-    if (mapContainerRef.current.offsetHeight === 0 || mapContainerRef.current.offsetWidth === 0) {
-      console.warn('Контейнер мапи має нульові розміри');
-      setTimeout(() => initializeInlineMap(), 500);
+    if (isInlineMapInitialized.current) {
+      console.log('Вбудована мапа вже ініціалізована, пропускаємо');
       return;
     }
 
     try {
-      const { coords, zoom } = await getDefaultCoordinates();
+      let coords = mapStateRef.current.center || (await getDefaultCoordinates()).coords;
+      let zoom = mapStateRef.current.zoom || (await getDefaultCoordinates()).zoom;
       console.log('Ініціалізація вбудованої мапи з координатами:', coords, 'зум:', zoom);
 
       mapRef.current = L.map(mapContainerRef.current, {
@@ -240,6 +352,16 @@ function ProductDetail() {
         zoom: zoom,
         scrollWheelZoom: false,
         dragging: true,
+      });
+
+      isInlineMapInitialized.current = true;
+
+      mapRef.current.on('moveend zoomend', () => {
+        mapStateRef.current = {
+          center: mapRef.current.getCenter(),
+          zoom: mapRef.current.getZoom(),
+        };
+        console.log('Оновлено стан мапи:', mapStateRef.current);
       });
 
       const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -265,6 +387,7 @@ function ProductDetail() {
       }
       clusterGroupRef.current = L.markerClusterGroup({
         maxClusterRadius: 30,
+        disableClusteringAtZoom: 18,
         iconCreateFunction: function (cluster) {
           const count = cluster.getChildCount();
           return L.divIcon({
@@ -273,17 +396,19 @@ function ProductDetail() {
             iconSize: L.point(40, 40),
           });
         },
-        spiderfyOnMaxZoom: true,
+        spiderfyOnMaxZoom: false,
         showCoverageOnHover: false,
       });
 
-      markerRefs.current = {};
+      mapRef.current.addLayer(clusterGroupRef.current);
 
-      if (data.storeLocations.length > 0) {
-        createMarkers(clusterGroupRef.current, markerRefs, data.storeLocations, data.product, activeMarkerId, setActiveMarkerId, updateMarkerIcon);
-        mapRef.current.addLayer(clusterGroupRef.current);
+      if (stableData.storeLocations.length > 0 && stableData.product) {
+        console.log('Створення маркерів для вбудованої мапи');
+        createMarkers(clusterGroupRef.current, markerRefs, stableData.storeLocations, stableData.product, activeMarkerId, setActiveMarkerId, selectedFilters, mapRef, true);
+      }
 
-        const cityStoreLocations = data.storeLocations.filter(storeLocation => {
+      if (stableData.storeLocations.length > 0 && !mapStateRef.current.center) {
+        const cityStoreLocations = stableData.storeLocations.filter(storeLocation => {
           const R = 6371;
           const lat1 = coords[0] * Math.PI / 180;
           const lat2 = storeLocation.latitude * Math.PI / 180;
@@ -300,40 +425,37 @@ function ProductDetail() {
 
         if (cityStoreLocations.length > 0) {
           const bounds = L.latLngBounds(cityStoreLocations.map(loc => [loc.latitude, loc.longitude]));
-          mapRef.current.fitBounds(bounds, { padding: [20, 20], maxZoom: 15 });
-          console.log('Мапа масштабована до магазинів у місті:', cityStoreLocations.length);
+          console.log('Встановлення меж для вбудованої мапи:', bounds);
+          mapRef.current.fitBounds(bounds, { padding: [20, 20], maxZoom: 10 });
         } else {
-          console.log('Немає магазинів у радіусі 5 км, центрування на місті:', userLocation);
+          console.log('Немає магазинів, центрування на місті:', userLocation);
           mapRef.current.setView(coords, zoom);
         }
       } else {
-        console.log('Немає магазинів, центрування на місті:', userLocation);
+        console.log('Є збережений стан або немає магазинів, центрування:', coords);
         mapRef.current.setView(coords, zoom);
       }
 
-      setTimeout(() => {
-        if (mapRef.current) {
-          mapRef.current.invalidateSize();
-        }
-      }, 200);
+      mapRef.current.invalidateSize();
     } catch (err) {
       console.error('Не вдалося ініціалізувати вбудовану мапу:', err);
       setError('Не вдалося ініціалізувати мапу.');
+      isInlineMapInitialized.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setError, data.storeLocations, data.product, userLocation, getDefaultCoordinates, createMarkers, updateMarkerIcon, setActiveMarkerId]);
+  }, [setError, stableData.storeLocations, stableData.product, userLocation, getDefaultCoordinates, selectedFilters, activeMarkerId, createMarkers]);
 
   // Initialize inline map only once on mount
   useEffect(() => {
-    if (!isLoading && !error && data.product) {
+    if (!isLoading && !error && stableData.product && stableData.storeLocations.length > 0 && !isInlineMapInitialized.current) {
       initializeInlineMap();
     }
 
     return () => {
-      if (mapRef.current) {
+      if (mapRef.current && !isMapFullScreen) {
         console.log('Очищення вбудованої мапи');
         mapRef.current.off('dragstart');
         mapRef.current.off('dragend');
+        mapRef.current.off('moveend zoomend');
         mapRef.current.remove();
         mapRef.current = null;
         if (clusterGroupRef.current) {
@@ -341,25 +463,27 @@ function ProductDetail() {
           clusterGroupRef.current = null;
         }
         markerRefs.current = {};
+        isInlineMapInitialized.current = false;
       }
     };
-  }, [isLoading, error, data.product, initializeInlineMap]);
+  }, [isLoading, error, stableData.product, stableData.storeLocations, initializeInlineMap, isMapFullScreen]);
 
-  // Initialize fullscreen map with clustering
+  // Initialize fullscreen map
   const initializeFullScreenMap = useCallback(async () => {
     if (!fullScreenMapContainerRef.current) {
       console.error('Контейнер повноекранної мапи не знайдено');
       return;
     }
 
-    if (fullScreenMapContainerRef.current.offsetHeight === 0 || fullScreenMapContainerRef.current.offsetWidth === 0) {
-      console.warn('Контейнер повноекранної мапи має нульові розміри');
-      setTimeout(() => initializeFullScreenMap(), 500);
+    if (isFullScreenMapInitialized.current) {
+      console.log('Повноекранна мапа вже ініціалізована, пропускаємо');
+      fullScreenMapRef.current.invalidateSize();
       return;
     }
 
     try {
-      const { coords, zoom } = await getDefaultCoordinates();
+      let coords = mapStateRef.current.center || (await getDefaultCoordinates()).coords;
+      let zoom = mapStateRef.current.zoom || (await getDefaultCoordinates()).zoom;
       console.log('Ініціалізація повноекранної мапи з координатами:', coords, 'зум:', zoom);
 
       fullScreenMapRef.current = L.map(fullScreenMapContainerRef.current, {
@@ -367,6 +491,16 @@ function ProductDetail() {
         zoom: zoom,
         scrollWheelZoom: true,
         dragging: true,
+      });
+
+      isFullScreenMapInitialized.current = true;
+
+      fullScreenMapRef.current.on('moveend zoomend', () => {
+        mapStateRef.current = {
+          center: fullScreenMapRef.current.getCenter(),
+          zoom: fullScreenMapRef.current.getZoom(),
+        };
+        console.log('Оновлено стан повноекранної мапи:', mapStateRef.current);
       });
 
       const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -378,11 +512,9 @@ function ProductDetail() {
         setError('Помилка завантаження мапи.');
       });
 
-      if (fullScreenClusterGroupRef.current) {
-        fullScreenClusterGroupRef.current.remove();
-      }
       fullScreenClusterGroupRef.current = L.markerClusterGroup({
         maxClusterRadius: 30,
+        disableClusteringAtZoom: 18,
         iconCreateFunction: function (cluster) {
           const count = cluster.getChildCount();
           return L.divIcon({
@@ -391,17 +523,19 @@ function ProductDetail() {
             iconSize: L.point(40, 40),
           });
         },
-        spiderfyOnMaxZoom: true,
+        spiderfyOnMaxZoom: false,
         showCoverageOnHover: false,
       });
 
-      fullScreenMarkerRefs.current = {};
+      fullScreenMapRef.current.addLayer(fullScreenClusterGroupRef.current);
 
-      if (data.storeLocations.length > 0) {
-        createMarkers(fullScreenClusterGroupRef.current, fullScreenMarkerRefs, data.storeLocations, data.product, activeMarkerId, setActiveMarkerId, updateMarkerIcon);
-        fullScreenMapRef.current.addLayer(fullScreenClusterGroupRef.current);
+      if (stableData.storeLocations.length > 0 && stableData.product) {
+        console.log('Створення маркерів для повноекранної мапи');
+        createMarkers(fullScreenClusterGroupRef.current, fullScreenMarkerRefs, stableData.storeLocations, stableData.product, activeMarkerId, setActiveMarkerId, selectedFilters, fullScreenMapRef, true);
+      }
 
-        const cityStoreLocations = data.storeLocations.filter(storeLocation => {
+      if (stableData.storeLocations.length > 0 && !mapStateRef.current.center) {
+        const cityStoreLocations = stableData.storeLocations.filter(storeLocation => {
           const R = 6371;
           const lat1 = coords[0] * Math.PI / 180;
           const lat2 = storeLocation.latitude * Math.PI / 180;
@@ -418,79 +552,79 @@ function ProductDetail() {
 
         if (cityStoreLocations.length > 0) {
           const bounds = L.latLngBounds(cityStoreLocations.map(loc => [loc.latitude, loc.longitude]));
+          console.log('Встановлення меж для повноекранної мапи:', bounds);
           fullScreenMapRef.current.fitBounds(bounds, { padding: [20, 20], maxZoom: 15 });
         } else {
+          console.log('Немає магазинів, центрування на місті:', userLocation);
           fullScreenMapRef.current.setView(coords, zoom);
         }
       } else {
+        console.log('Є збережений стан або немає магазинів, центрування:', coords);
         fullScreenMapRef.current.setView(coords, zoom);
       }
 
-      setTimeout(() => {
-        if (fullScreenMapRef.current) {
-          fullScreenMapRef.current.invalidateSize();
-        }
-      }, 500);
+      fullScreenMapRef.current.invalidateSize();
     } catch (err) {
       console.error('Не вдалося ініціалізувати повноекранну мапу:', err);
       setError('Не вдалося завантажити повноекранну мапу.');
+      isFullScreenMapInitialized.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setError, data.storeLocations, data.product, getDefaultCoordinates, createMarkers, updateMarkerIcon, setActiveMarkerId]);
+  }, [setError, stableData.storeLocations, stableData.product, getDefaultCoordinates, selectedFilters, activeMarkerId, createMarkers, userLocation]);
+
+  // Initialize or update fullscreen map only when it opens
+  useEffect(() => {
+    if (isMapFullScreen && stableData.product && stableData.storeLocations.length > 0) {
+      initializeFullScreenMap();
+    }
+
+    return () => {
+      if (fullScreenMapRef.current && !isMapFullScreen) {
+        console.log('Очищення повноекранної мапи');
+        fullScreenMapRef.current.off('moveend zoomend');
+        fullScreenMapRef.current.remove();
+        fullScreenMapRef.current = null;
+        if (fullScreenClusterGroupRef.current) {
+          fullScreenClusterGroupRef.current.remove();
+          fullScreenClusterGroupRef.current = null;
+        }
+        fullScreenMarkerRefs.current = {};
+        isFullScreenMapInitialized.current = false;
+      }
+    };
+  }, [isMapFullScreen, stableData.product, stableData.storeLocations, initializeFullScreenMap]);
+
+  // Update markers when data or filters change
+  useEffect(() => {
+    if (mapRef.current && clusterGroupRef.current && stableData.storeLocations.length > 0 && stableData.product) {
+      console.log('Оновлення маркерів для вбудованої мапи через зміну даних або фільтрів');
+      createMarkers(clusterGroupRef.current, markerRefs, stableData.storeLocations, stableData.product, activeMarkerId, setActiveMarkerId, selectedFilters, mapRef);
+    }
+    if (isMapFullScreen && fullScreenMapRef.current && fullScreenClusterGroupRef.current && stableData.storeLocations.length > 0 && stableData.product) {
+      console.log('Оновлення маркерів для повноекранної мапи через зміну даних або фільтрів');
+      createMarkers(fullScreenClusterGroupRef.current, fullScreenMarkerRefs, stableData.storeLocations, stableData.product, activeMarkerId, setActiveMarkerId, selectedFilters, fullScreenMapRef);
+    }
+  }, [stableData.storeLocations, stableData.product, selectedFilters, isMapFullScreen, activeMarkerId, createMarkers]);
 
   // Update marker icons when activeMarkerId changes
   useEffect(() => {
-    const prevActiveMarkerId = prevActiveMarkerIdRef.current;
-
-    // Deactivate previous marker
-    if (prevActiveMarkerId && markerRefs.current[prevActiveMarkerId]) {
-      const prevStore = data.storeLocations.find((loc, idx) =>
-        `${loc.store_name}_${loc.latitude}_${loc.longitude}_${idx}` === prevActiveMarkerId
+    if (stableData.storeLocations.length > 0 && stableData.product) {
+      console.log('Оновлення іконок маркерів через зміну activeMarkerId:', activeMarkerId);
+      updateActiveMarkerIcons(
+        prevActiveMarkerIdRef.current,
+        activeMarkerId,
+        markerRefs,
+        fullScreenMarkerRefs,
+        stableData.storeLocations,
+        stableData.product
       );
-      const prevPrice = prevStore
-        ? data.product.store_prices?.find(sp => sp.name === prevStore.store_name)?.price || 'Н/Д'
-        : 'Н/Д';
-      updateMarkerIcon(markerRefs.current[prevActiveMarkerId], prevActiveMarkerId, prevPrice, false);
+      prevActiveMarkerIdRef.current = activeMarkerId;
     }
-    if (prevActiveMarkerId && fullScreenMarkerRefs.current[prevActiveMarkerId]) {
-      const prevStore = data.storeLocations.find((loc, idx) =>
-        `${loc.store_name}_${loc.latitude}_${loc.longitude}_${idx}` === prevActiveMarkerId
-      );
-      const prevPrice = prevStore
-        ? data.product.store_prices?.find(sp => sp.name === prevStore.store_name)?.price || 'Н/Д'
-        : 'Н/Д';
-      updateMarkerIcon(fullScreenMarkerRefs.current[prevActiveMarkerId], prevActiveMarkerId, prevPrice, false);
-    }
-
-    // Activate current marker
-    if (activeMarkerId && markerRefs.current[activeMarkerId]) {
-      const currentStore = data.storeLocations.find((loc, idx) =>
-        `${loc.store_name}_${loc.latitude}_${loc.longitude}_${idx}` === activeMarkerId
-      );
-      const currentPrice = currentStore
-        ? data.product.store_prices?.find(sp => sp.name === currentStore.store_name)?.price || 'Н/Д'
-        : 'Н/Д';
-      updateMarkerIcon(markerRefs.current[activeMarkerId], activeMarkerId, currentPrice, true);
-    }
-    if (activeMarkerId && fullScreenMarkerRefs.current[activeMarkerId]) {
-      const currentStore = data.storeLocations.find((loc, idx) =>
-        `${loc.store_name}_${loc.latitude}_${loc.longitude}_${idx}` === activeMarkerId
-      );
-      const currentPrice = currentStore
-        ? data.product.store_prices?.find(sp => sp.name === currentStore.store_name)?.price || 'Н/Д'
-        : 'Н/Д';
-      updateMarkerIcon(fullScreenMarkerRefs.current[activeMarkerId], activeMarkerId, currentPrice, true);
-    }
-
-    // Update previous marker ID
-    prevActiveMarkerIdRef.current = activeMarkerId;
-
-  }, [activeMarkerId, data.storeLocations, data.product, updateMarkerIcon]);
+  }, [activeMarkerId, stableData.storeLocations, stableData.product, updateActiveMarkerIcons]);
 
   // Handle clicks outside city popup
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (cityPopupRef.current && !cityPopupRef.current.contains(event.target) && !event.target.classList.contains('city-search-input')) {
+      if (cityPopupRef.current && !cityPopupRef.current.contains(event.target) && !event.target.classList.contains('city-map-search-input')) {
         setShowCityPopup(false);
         setCitySearch('');
       }
@@ -551,31 +685,8 @@ function ProductDetail() {
       duration: 1,
     });
 
-    if (fullScreenClusterGroupRef.current) {
-      fullScreenClusterGroupRef.current.clearLayers();
-    } else {
-      fullScreenClusterGroupRef.current = L.markerClusterGroup({
-        maxClusterRadius: 30,
-        iconCreateFunction: function (cluster) {
-          const count = cluster.getChildCount();
-          return L.divIcon({
-            html: `<div class="cluster-icon">${count}</div>`,
-            className: 'custom-cluster',
-            iconSize: L.point(40, 40),
-          });
-        },
-        spiderfyOnMaxZoom: true,
-        showCoverageOnHover: false,
-      });
-    }
-
-    fullScreenMarkerRefs.current = {};
-
-    if (data.storeLocations.length > 0) {
-      createMarkers(fullScreenClusterGroupRef.current, fullScreenMarkerRefs, data.storeLocations, data.product, activeMarkerId, setActiveMarkerId, updateMarkerIcon);
-      fullScreenMapRef.current.addLayer(fullScreenClusterGroupRef.current);
-
-      const cityStoreLocations = data.storeLocations.filter(storeLocation => {
+    if (stableData.storeLocations.length > 0) {
+      const cityStoreLocations = stableData.storeLocations.filter(storeLocation => {
         const R = 6371;
         const lat1 = coords[0] * Math.PI / 180;
         const lat2 = storeLocation.latitude * Math.PI / 180;
@@ -592,48 +703,32 @@ function ProductDetail() {
 
       if (cityStoreLocations.length > 0) {
         const bounds = L.latLngBounds(cityStoreLocations.map(loc => [loc.latitude, loc.longitude]));
+        console.log('Встановлення меж при виборі міста:', bounds);
         fullScreenMapRef.current.fitBounds(bounds, { padding: [20, 20], maxZoom: 15 });
       } else {
+        console.log('Немає магазинів, центрування на місті:', cityName);
         fullScreenMapRef.current.setView(coords, zoom);
       }
+    } else {
+      console.log('Немає магазинів, центрування на місті:', cityName);
+      fullScreenMapRef.current.setView(coords, zoom);
     }
 
     setShowCityPopup(false);
     setCitySearch('');
-  }, [setError, data.storeLocations, data.product, activeMarkerId, cityCoordinates, createMarkers, updateMarkerIcon, setActiveMarkerId]);
+  }, [setError, stableData.storeLocations, cityCoordinates]);
 
   const filteredCities = citySearch
-    ? data.cities.filter(city =>
+    ? stableData.cities.filter(city =>
         city.name_ua.toLowerCase().includes(citySearch.toLowerCase())
       )
     : [
-        ...data.cities.filter(city => topCities.slice(0, -1).includes(city.name_ua)),
+        ...stableData.cities.filter(city => topCities.slice(0, -1).includes(city.name_ua)),
         { id: 'geolocation', name_ua: 'За розташуванням' }
       ].slice(0, 10);
 
-  useEffect(() => {
-    if (isMapFullScreen) {
-      setTimeout(() => {
-        initializeFullScreenMap();
-      }, 100);
-    }
-
-    return () => {
-      if (fullScreenMapRef.current) {
-        console.log('Очищення повноекранної мапи');
-        fullScreenMapRef.current.remove();
-        fullScreenMapRef.current = null;
-        if (fullScreenClusterGroupRef.current) {
-          fullScreenClusterGroupRef.current.remove();
-          fullScreenClusterGroupRef.current = null;
-        }
-        fullScreenMarkerRefs.current = {};
-      }
-    };
-  }, [isMapFullScreen, initializeFullScreenMap]);
-
-  const images = data.product && data.product.images && data.product.images.length > 0 
-    ? data.product.images 
+  const images = stableData.product && stableData.product.images && stableData.product.images.length > 0 
+    ? stableData.product.images 
     : ['/img/placeholder.webp'];
 
   const handlePrevImage = useCallback(
@@ -665,7 +760,7 @@ function ProductDetail() {
   );
 
   useEffect(() => {
-    if (!data.product) return;
+    if (!stableData.product) return;
 
     const handleKeyDown = (e) => {
       if (!isFullScreen && !isMapFullScreen) return;
@@ -683,7 +778,7 @@ function ProductDetail() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFullScreen, isMapFullScreen, data.product, handlePrevImage, handleNextImage]);
+  }, [isFullScreen, isMapFullScreen, stableData.product, handlePrevImage, handleNextImage]);
 
   const handleSaveToggle = async (e) => {
     e.preventDefault();
@@ -755,10 +850,36 @@ function ProductDetail() {
       return;
     }
     console.log('Перемикання повноекранної мапи');
-    setIsMapFullScreen(!isMapFullScreen);
+    setIsMapFullScreen(prev => !prev);
     setShowCityPopup(false);
     setCitySearch('');
   };
+
+  const handleFilterChange = useCallback((filterType, value) => {
+    console.log('Зміна фільтра:', { filterType, value });
+    setSelectedFilters(prev => {
+      const newFilters = { ...prev };
+      if (newFilters[filterType].includes(value)) {
+        newFilters[filterType] = newFilters[filterType].filter(item => item !== value);
+      } else {
+        newFilters[filterType] = [...newFilters[filterType], value];
+      }
+      console.log('Новий стан фільтрів:', newFilters);
+      return newFilters;
+    });
+  }, []);
+
+  // Update disabled filters
+  useEffect(() => {
+    if (!stableData.storeLocations || !stableData.product) return;
+
+    const disabledStores = [];
+
+    setDisabledFilters(prev => ({
+      ...prev,
+      stores: disabledStores,
+    }));
+  }, [stableData.storeLocations, stableData.product]);
 
   if (isLoading) {
     return (
@@ -775,7 +896,7 @@ function ProductDetail() {
     return <div className="error-message">{error.message || error}</div>;
   }
 
-  if (!data.product) {
+  if (!stableData.product) {
     setError('Товар не знайдено');
     return null;
   }
@@ -822,16 +943,16 @@ function ProductDetail() {
   };
 
   const featureList = [
-    { key: 'Бренд', value: data.product.features?.brand },
-    { key: 'Країна виробництва', value: data.product.features?.country },
-    { key: 'Вид', value: data.product.features?.type },
-    { key: 'Клас', value: data.product.features?.class },
-    { key: 'Тип волосся / проблема', value: data.product.features?.hairType },
-    { key: 'Особливості', value: data.product.features?.features },
-    { key: 'Група товару', value: data.product.features?.category },
-    { key: 'Призначення', value: data.product.features?.purpose },
-    { key: 'Стать', value: data.product.features?.gender },
-    { key: 'Активний компонент', value: data.product.features?.active_ingredients },
+    { key: 'Бренд', value: stableData.product.features?.brand },
+    { key: 'Країна виробництва', value: stableData.product.features?.country },
+    { key: 'Вид', value: stableData.product.features?.type },
+    { key: 'Клас', value: stableData.product.features?.class },
+    { key: 'Тип волосся / проблема', value: stableData.product.features?.hairType },
+    { key: 'Особливості', value: stableData.product.features?.features },
+    { key: 'Група товару', value: stableData.product.features?.category },
+    { key: 'Призначення', value: stableData.product.features?.purpose },
+    { key: 'Стать', value: stableData.product.features?.gender },
+    { key: 'Активний компонент', value: stableData.product.features?.active_ingredients },
   ].filter(feature => feature.value);
 
   const renderFeatureDescription = (desc) => {
@@ -848,9 +969,11 @@ function ProductDetail() {
   };
 
   const getMinPrice = () => {
-    if (!data.product.store_prices || data.product.store_prices.length === 0) return 'Н/Д';
-    return Math.min(...data.product.store_prices.map(sp => sp.price)) + ' грн';
+    if (!stableData.product.store_prices || stableData.product.store_prices.length === 0) return 'Н/Д';
+    return Math.min(...stableData.product.store_prices.map(sp => sp.price)) + ' грн';
   };
+
+  const uniqueStores = [...new Set(stableData.storeLocations.map(location => location.store_name))];
 
   return (
     <div className="product-detail">
@@ -937,7 +1060,7 @@ function ProductDetail() {
               >
                 <img
                   src={img}
-                  alt={`${data.product.name} thumbnail ${index + 1}`}
+                  alt={`${stableData.product.name} thumbnail ${index + 1}`}
                   onError={(e) => {
                     console.log(`Помилка завантаження зображення: ${img}`);
                     e.target.src = '/img/placeholder.webp';
@@ -949,7 +1072,7 @@ function ProductDetail() {
               <div className="thumbnail more-images" onClick={() => handleImageClick(4)}>
                 <img
                   src={images[4]}
-                  alt={`${data.product.name} more`}
+                  alt={`${stableData.product.name} more`}
                   onError={(e) => {
                     console.log(`Помилка завантаження зображення: ${images[4]}`);
                     e.target.src = '/img/placeholder.webp';
@@ -964,7 +1087,7 @@ function ProductDetail() {
               {prevImageIndex !== null && (
                 <img
                   src={images[prevImageIndex]}
-                  alt={`${data.product.name} ${prevImageIndex + 1}`}
+                  alt={`${stableData.product.name} ${prevImageIndex + 1}`}
                   className={`main-image main-image-prev ${
                     direction === 'right' ? 'slide-out-left' : 'slide-out-right'
                   }`}
@@ -976,7 +1099,7 @@ function ProductDetail() {
               )}
               <img
                 src={images[currentImageIndex]}
-                alt={`${data.product.name} ${currentImageIndex + 1}`}
+                alt={`${stableData.product.name} ${currentImageIndex + 1}`}
                 className={`main-image ${
                   direction === 'right'
                     ? 'slide-in-right'
@@ -1008,11 +1131,11 @@ function ProductDetail() {
         </div>
 
         <div className="product-info">
-          <h2>{data.product.name}</h2>
+          <h2>{stableData.product.name}</h2>
           <div className="product-meta">
-            <div className="rating">{renderStars(data.product.rating || 0)}</div>
-            <div className="views">{data.product.views || 0} переглядів</div>
-            <div className="product-code">Код: {data.product.code || 'Н/Д'}</div>
+            <div className="rating">{renderStars(stableData.product.rating || 0)}</div>
+            <div className="views">{stableData.product.views || 0} переглядів</div>
+            <div className="product-code">Код: {stableData.product.code || 'Н/Д'}</div>
           </div>
           <div className="price-container">
             <p className="price">{getMinPrice()}</p>
@@ -1049,7 +1172,7 @@ function ProductDetail() {
           <div className="map-container" onClick={toggleMapFullScreen}>
             <div ref={mapContainerRef} className="map" style={{ height: '200px', width: '100%' }}></div>
           </div>
-          <p className="volume">Об'єм: {data.product.volume || 'Н/Д'}</p>
+          <p className="volume">Об'єм: {stableData.product.volume || 'Н/Д'}</p>
         </div>
       </div>
 
@@ -1073,32 +1196,24 @@ function ProductDetail() {
         <h3>Опис товару</h3>
         <div className="description-section">
           <h4>Опис</h4>
-          {data.product.description_full ? (
-            renderFeatureDescription(data.product.description_full)
+          {stableData.product.description_full ? (
+            renderFeatureDescription(stableData.product.description_full)
           ) : (
             <p>Опис відсутній</p>
           )}
-        </div>
-        <div className="description-section">
-          <h4>Склад</h4>
-          <p>{data.product.composition || 'Н/Д'}</p>
-        </div>
-        <div className="description-section">
-          <h4>Використання</h4>
-          <p>{data.product.usage || 'Н/Д'}</p>
         </div>
       </div>
 
       <div className="store-prices" ref={storePricesRef}>
         <h3>Ціни в магазинах</h3>
-        <div className="store-list">
-          {data.product.store_prices?.length > 0 ? (
-            data.product.store_prices.map((store, index) => (
+        {stableData.product.store_prices && stableData.product.store_prices.length > 0 ? (
+          <div className="store-list">
+            {stableData.product.store_prices.map((store, index) => (
               <div key={index} className="store-item">
                 <div className="store-name-logo">
                   <p className="store-name">{store.name}</p>
                   <img
-                    src={store.logo}
+                    src={store.logo || '/img/placeholder.webp'}
                     alt={`${store.name} logo`}
                     className="store-logo"
                     onError={(e) => {
@@ -1108,83 +1223,73 @@ function ProductDetail() {
                   />
                 </div>
                 <div className="store-details">
-                  <p className="store-years">✓ З нами більше {store.years_with_us || '-'} років</p>
-                  <p className="store-delivery">• Доставка: {store.delivery}</p>
+                  <p className="store-years">Роки роботи: {store.years || 'Н/Д'}</p>
+                  <p className="store-delivery">Доставка: {store.delivery || 'Н/Д'}</p>
                 </div>
                 <div className="store-price-buy">
                   <p className="store-price">{store.price} грн</p>
-                  <a href={store.link || '#'} target="_blank" rel="noopener noreferrer">
-                    <button className="buy-button">Купити</button>
-                  </a>
+                  <button
+                    className="buy-button"
+                    onClick={() => window.open(store.link, '_blank')}
+                    aria-label={`Купити в ${store.name}`}
+                  >
+                    Купити
+                  </button>
                 </div>
               </div>
-            ))
-          ) : (
-            <p>Ціни в магазинах відсутні</p>
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p>Ціни в магазинах відсутні</p>
+        )}
       </div>
 
       {isFullScreen && (
-        <div className="fullscreen-modal" onClick={toggleFullScreen}>
+        <div className="fullscreen-modal">
           <div className="fullscreen-content">
-            <div className="image-container">
-              {prevImageIndex && (
-                <img
-                  src={images[prevImageIndex]}
-                  alt={`${data.product.name} fullscreen ${prevImageIndex + 1}`}
-                  className={`fullscreen-image fullscreen-image-prev ${
-                    direction === 'right' ? 'slide-out-left' : 'slide-out-right'
-                  }`}
-                  onError={(e) => {
-                    console.log(`Помилка завантаження зображення: ${images[prevImageIndex]}`);
-                    e.target.src = '/img/placeholder.webp';
-                  }}
-                />
-              )}
+            {prevImageIndex !== null && (
               <img
-                src={images[currentImageIndex]}
-                alt={`${data.product.name} fullscreen ${currentImageIndex + 1}`}
-                className={`fullscreen-image ${
-                  direction === 'right'
-                    ? 'slide-in-right'
-                    : direction === 'left'
-                    ? 'slide-in-left'
-                    : ''
+                src={images[prevImageIndex]}
+                alt={`${stableData.product.name} ${prevImageIndex + 1}`}
+                className={`fullscreen-image fullscreen-image-prev ${
+                  direction === 'right' ? 'slide-out-left' : 'slide-out-right'
                 }`}
                 onError={(e) => {
-                  console.log(`Помилка завантаження зображення: ${images[currentImageIndex]}`);
+                  console.log(`Помилка завантаження зображення: ${images[prevImageIndex]}`);
                   e.target.src = '/img/placeholder.webp';
                 }}
               />
-            </div>
+            )}
+            <img
+              src={images[currentImageIndex]}
+              alt={`${stableData.product.name} ${currentImageIndex + 1}`}
+              className={`fullscreen-image ${
+                direction === 'right'
+                  ? 'slide-in-right'
+                  : direction === 'left'
+                  ? 'slide-in-left'
+                  : ''
+              }`}
+              onError={(e) => {
+                console.log(`Помилка завантаження зображення: ${images[currentImageIndex]}`);
+                e.target.src = '/img/placeholder.webp';
+              }}
+            />
             {images.length > 1 && (
               <>
-                <div
-                  className="fullscreen-arrow fullscreen-prev"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePrevImage(e);
-                  }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                <div className="fullscreen-arrow fullscreen-prev" onClick={handlePrevImage}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                     <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6l-1.41-1.41z" />
                   </svg>
                 </div>
-                <div
-                  className="fullscreen-arrow fullscreen-next"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleNextImage(e);
-                  }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                <div className="fullscreen-arrow fullscreen-next" onClick={handleNextImage}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                     <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6l-1.41-1.41z" />
                   </svg>
                 </div>
               </>
             )}
-            <button className="close-fullscreen" onClick={toggleFullScreen}>
+            <button className="close-fullscreen" onClick={toggleFullScreen} aria-label="Закрити повноекранний режим">
               ✕
             </button>
           </div>
@@ -1194,38 +1299,60 @@ function ProductDetail() {
       {isMapFullScreen && (
         <div className="fullscreen-map-modal">
           <div className="fullscreen-map-content">
-            <div style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 1001, display: 'flex', alignItems: 'center' }}>
-              <input
-                type="text"
-                placeholder="Пошук міста..."
-                value={citySearch}
-                onChange={(e) => setCitySearch(e.target.value)}
-                className="city-map-search-input"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowCityPopup(true);
-                }}
-              />
-              {showCityPopup && (
-                <div className={`city-map-popup ${showCityPopup ? 'open' : ''}`} ref={cityPopupRef}>
-                  <div className="city-list">
-                    {filteredCities.map((city) => (
-                      <div
-                        key={city.id}
-                        className="city-item"
-                        onClick={() => handleCitySelect(city.name_ua)}
-                      >
-                        {city.name_ua}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div ref={fullScreenMapContainerRef} className="fullscreen-map" style={{ height: '100%' }}></div>
-            <button className="close-fullscreen-map" onClick={toggleMapFullScreen}>
+            <div ref={fullScreenMapContainerRef} className="fullscreen-map" style={{ height: '100%', width: '100%' }}></div>
+            <button
+              className="close-fullscreen-map"
+              onClick={toggleMapFullScreen}
+              aria-label="Закрити повноекранну мапу"
+            >
               ✕
             </button>
+            <input
+              type="text"
+              className="city-map-search-input"
+              placeholder="Введіть назву міста"
+              value={citySearch}
+              onChange={(e) => {
+                setCitySearch(e.target.value);
+                setShowCityPopup(true);
+              }}
+              onClick={() => setShowCityPopup(true)}
+            />
+            {showCityPopup && (
+              <div className="city-map-popup open" ref={cityPopupRef}>
+                <div className="city-list">
+                  {filteredCities.map((city) => (
+                    <div
+                      key={city.id}
+                      className="city-item"
+                      onClick={() => handleCitySelect(city.name_ua)}
+                    >
+                      {city.name_ua}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="filter-panel">
+              <h3>Магазини</h3>
+              <div className="filter-items">
+                {uniqueStores.map((store, index) => (
+                  <label
+                    key={index}
+                    className={`filter-checkbox ${disabledFilters.stores.includes(store) ? 'disabled' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      value={store}
+                      checked={selectedFilters.stores.includes(store)}
+                      onChange={() => handleFilterChange('stores', store)}
+                      disabled={disabledFilters.stores.includes(store)}
+                    />
+                    <span className="filter-label">{store}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1233,13 +1360,13 @@ function ProductDetail() {
       {showDeleteModal && (
         <div className="delete-modal-overlay">
           <div className="delete-modal">
-            <p>Ви точно хочете видалити товар "{data.product.name} ({data.product.id})"?</p>
+            <p>Ви впевнені, що хочете видалити цей товар?</p>
             <div className="delete-modal-buttons">
               <button className="delete-confirm-btn" onClick={handleDeleteConfirm}>
-                Так
+                Видалити
               </button>
               <button className="delete-cancel-btn" onClick={handleDeleteCancel}>
-                Ні
+                Скасувати
               </button>
             </div>
           </div>
