@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import './CategoryList.css';
 import { subcategoriesData } from './CategorySubcategories';
-import { useError } from './ErrorContext'; // Додаємо useError
+import { useError } from './ErrorContext';
 import news1 from '../img/news1.png';
 import news2 from '../img/news2.png';
 import news3 from '../img/news3.png';
@@ -28,14 +28,13 @@ const carouselImages = [
   { src: news10, alt: 'Скраби - Акція' },
 ];
 
-const SLIDE_WIDTH = 159; // Static width for company slides
-const EXTEND_FACTOR = 3; // Repeat arrays 3 times for smooth infinite scrolling
+const SLIDE_WIDTH = 159;
+const EXTEND_FACTOR = 3;
 
-// Групи для бічної панелі
 const groups = [
   { id: 'makeup', name: 'Макіяж' },
   { id: 'skincare', name: 'Догляд за шкірою' },
-  { id: 'korean-cosmetics', name: 'Корейська косметика♥' },
+  { id: 'korean-cosmetics', name: 'Корейська косметика', isNew: true },
   { id: 'haircare', name: 'Догляд за волоссям' },
   { id: 'men-care', name: 'Чоловічий догляд' },
   { id: 'child-care', name: 'Дитячий догляд' },
@@ -61,14 +60,12 @@ function CategoryList() {
   const [subcategoryShowMore, setSubcategoryShowMore] = useState({});
   const heroIntervalRef = useRef(null);
   const productIntervalRef = useRef(null);
-  const { setError, clearError } = useError(); // Використовуємо контекст
+  const { setError, clearError } = useError();
 
-  // Create extended arrays for infinite scrolling
   const extendedHeroImages = Array(EXTEND_FACTOR).fill(carouselImages).flat();
   const extendedProducts = recommendedProducts.length ? Array(EXTEND_FACTOR).fill(recommendedProducts).flat() : [];
   const extendedStores = stores.length ? Array(EXTEND_FACTOR).fill(stores).flat() : [];
 
-  // Fetch stores from the database
   useEffect(() => {
     const fetchStores = async () => {
       try {
@@ -84,12 +81,11 @@ function CategoryList() {
     fetchStores();
   }, [setError]);
 
-  // Завантаження рекомендованих продуктів з API
   useEffect(() => {
     const fetchRecommendedProducts = async () => {
       setIsLoading(true);
       setIsFadingOut(false);
-      clearError(); // Очищаємо помилку перед запитом
+      clearError();
       try {
         const response = await axios.get('https://price-ua-react-backend.onrender.com/products', {
           params: {
@@ -116,7 +112,6 @@ function CategoryList() {
     fetchRecommendedProducts();
   }, [setError, clearError]);
 
-  // Function to start or reset the hero carousel timer
   const startHeroTimer = useCallback(() => {
     if (heroIntervalRef.current) {
       clearInterval(heroIntervalRef.current);
@@ -137,7 +132,6 @@ function CategoryList() {
     }, 4000);
   }, []);
 
-  // Function to start or reset the product carousel timer
   const startProductTimer = useCallback(() => {
     if (productIntervalRef.current) {
       clearInterval(productIntervalRef.current);
@@ -158,7 +152,6 @@ function CategoryList() {
     }, 4000);
   }, [recommendedProducts.length]);
 
-  // Start timers on mount
   useEffect(() => {
     startHeroTimer();
     if (recommendedProducts.length) {
@@ -170,21 +163,18 @@ function CategoryList() {
     };
   }, [recommendedProducts.length, startHeroTimer, startProductTimer]);
 
-  // Handle manual navigation for hero carousel
   const goToHeroSlide = (index) => {
     setIsHeroTransitioning(true);
     setCurrentHeroSlide(index);
     startHeroTimer();
   };
 
-  // Handle manual navigation for product carousel
   const goToProductSlide = (index) => {
     setIsProductTransitioning(true);
     setCurrentProductSlide(index);
     startProductTimer();
   };
 
-  // Handle navigation for companies carousel
   const goToNextCompanySlide = () => {
     setIsCompanyTransitioning(true);
     setCurrentCompanySlide((prev) => {
@@ -218,7 +208,6 @@ function CategoryList() {
     });
   };
 
-  // Handle mouse enter for dropdown
   const handleMouseEnter = (groupId) => {
     if (activeGroup !== groupId) {
       if (activeGroup) {
@@ -233,7 +222,6 @@ function CategoryList() {
     }
   };
 
-  // Handle mouse leave for dropdown
   const handleMouseLeave = () => {
     setIsClosing(true);
     setTimeout(() => {
@@ -242,7 +230,6 @@ function CategoryList() {
     }, 200);
   };
 
-  // Toggle show more for subcategories
   const toggleSubcategoryShowMore = (groupId, categoryId) => {
     setSubcategoryShowMore((prev) => ({
       ...prev,
@@ -250,7 +237,6 @@ function CategoryList() {
     }));
   };
 
-  // Render star rating
   const renderStars = (rating) => {
     const stars = [];
     for (let i = 0; i < 5; i++) {
@@ -263,13 +249,11 @@ function CategoryList() {
     return stars;
   };
 
-  // Get product price
   const getProductPrice = (storePrices) => {
     if (!storePrices || storePrices.length === 0) return 'Н/Д';
     return Math.min(...storePrices.map(sp => sp.price));
   };
 
-  // Render loading
   if (isLoading) {
     return (
       <div className={`loading-overlay ${isFadingOut ? 'fade-out' : ''}`}>
@@ -294,6 +278,7 @@ function CategoryList() {
               >
                 <Link to={`/subcategories/${group.id}`} className="group-name-wrapper">
                   <span className="group-name">{group.name}</span>
+                  {group.isNew && <span className="new-label">new</span>}
                 </Link>
               </div>
             ))}
