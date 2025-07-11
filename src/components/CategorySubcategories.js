@@ -162,6 +162,123 @@ export const subcategoriesData = {
       ],
     },
   ],
+  'korean-cosmetics': [
+    {
+      category: 'Очищення',
+      categoryId: 'korean-cleansing',
+      items: [
+        { id: 'hydrophilic-oils', name: 'Гідрофільні олії' },
+        { id: 'foams-washing', name: 'Пінки для вмивання' },
+        { id: 'cleansing-gels', name: 'Гелі для вмивання' },
+        { id: 'micellar-water', name: 'Міцелярна вода' },
+        { id: 'scrubs', name: 'Скраби' },
+        { id: 'peeling', name: 'Пілінги' },
+      ],
+    },
+    {
+      category: 'Тонізація',
+      categoryId: 'toning',
+      items: [
+        { id: 'toners', name: 'Тонери' },
+        { id: 'bridges', name: 'Місти' },
+        { id: 'toning-essences', name: 'Тонізуючі есенції' },
+      ],
+    },
+    {
+      category: 'Сироватки та есенції',
+      categoryId: 'serums-essences',
+      items: [
+        { id: 'serums', name: 'Сироватки' },
+        { id: 'essences', name: 'Есенції' },
+        { id: 'ampoules', name: 'Ампули' },
+      ],
+    },
+    {
+      category: 'Зволоження',
+      categoryId: 'moisturizing',
+      items: [
+        { id: 'face-cream', name: 'Креми для обличчя' },
+        { id: 'gels', name: 'Гелі' },
+        { id: 'lotions', name: 'Лосьйони' },
+        { id: 'emulsions', name: 'Емульсії' },
+        { id: 'night-masks', name: 'Нічні маски' },
+      ],
+    },
+    {
+      category: 'Захист від сонця',
+      categoryId: 'sun-protection',
+      items: [
+        { id: 'sunscreen-creams', name: 'Сонцезахисні креми' },
+        { id: 'sunscreen-gels', name: 'Сонцезахисні гелі' },
+        { id: 'cushions-spf', name: 'Кушони з SPF' },
+      ],
+    },
+    {
+      category: 'Маски',
+      categoryId: 'masks',
+      items: [
+        { id: 'sheet-masks', name: 'Тканинні маски' },
+        { id: 'clay-masks', name: 'Глиняні маски' },
+        { id: 'night-masks', name: 'Нічні маски' },
+        { id: 'film-masks', name: 'Маски-плівки' },
+        { id: 'lip-masks', name: 'Маски для губ' },
+        { id: 'eye-masks', name: 'Маски для очей' },
+      ],
+    },
+    {
+      category: 'Догляд за очима та губами',
+      categoryId: 'eye-lip-care',
+      items: [
+        { id: 'eye-creams', name: 'Креми для очей' },
+        { id: 'eye-patches', name: 'Патчі під очі' },
+        { id: 'lip-balms', name: 'Бальзами для губ' },
+        { id: 'lip-scrubs', name: 'Скраби для губ' },
+      ],
+    },
+    {
+      category: 'Догляд за тілом',
+      categoryId: 'body-care',
+      items: [
+        { id: 'body-lotions', name: 'Лосьйони для тіла' },
+        { id: 'hand-creams', name: 'Креми для рук' },
+        { id: 'shower-gels', name: 'Гелі для душу' },
+        { id: 'body-scrubs', name: 'Скраби для тіла' },
+      ],
+    },
+    {
+      category: 'Догляд за волоссям',
+      categoryId: 'hair-care',
+      items: [
+        { id: 'shampoos', name: 'Шампуні' },
+        { id: 'conditioners', name: 'Кондиціонери' },
+        { id: 'hair-masks', name: 'Маски для волосся' },
+        { id: 'hair-serums', name: 'Сироватки для волосся' },
+      ],
+    },
+    {
+      category: 'BB/CC креми та тональні основи',
+      categoryId: 'bb-cc-creams',
+      items: [
+        { id: 'bb-creams', name: 'BB-креми' },
+        { id: 'cc-creams', name: 'CC-креми' },
+        { id: 'cushions', name: 'Кушони' },
+        { id: 'foundation-creams', name: 'Тональні креми' },
+        { id: 'makeup-base', name: 'База під макіяж' },
+      ],
+    },
+    {
+      category: 'Макіяж',
+      categoryId: 'makeup',
+      items: [
+        { id: 'eyeshadows', name: 'Тіні' },
+        { id: 'eyeliners', name: 'Підводки' },
+        { id: 'blushes', name: 'Рум’яна' },
+        { id: 'lipsticks', name: 'Помади' },
+        { id: 'mascaras', name: 'Туші' },
+        { id: 'brow-pencils', name: 'Олівці для брів' },
+      ],
+    },
+  ],
   haircare: [
     {
       category: 'Очищення',
@@ -662,6 +779,7 @@ function CategorySubcategories() {
     <div className="category-subcategories">
       <h1>
         {groupId === 'makeup' ? 'Макіяж' :
+         groupId === 'korean-cosmetics' ? 'Корейська косметика': 
          groupId === 'skincare' ? 'Догляд за шкірою' :
          groupId === 'haircare' ? 'Догляд за волоссям' :
          groupId === 'men-care' ? 'Чоловічий догляд' : 

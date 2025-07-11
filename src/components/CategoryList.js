@@ -35,6 +35,7 @@ const EXTEND_FACTOR = 3; // Repeat arrays 3 times for smooth infinite scrolling
 const groups = [
   { id: 'makeup', name: 'Макіяж' },
   { id: 'skincare', name: 'Догляд за шкірою' },
+  { id: 'korean-cosmetics', name: 'Корейська косметика♥' },
   { id: 'haircare', name: 'Догляд за волоссям' },
   { id: 'men-care', name: 'Чоловічий догляд' },
   { id: 'child-care', name: 'Дитячий догляд' },
