@@ -15,6 +15,11 @@ import news8 from '../img/news8.png';
 import news9 from '../img/news9.png';
 import news10 from '../img/news10.png';
 
+import Choosing_shampoo from '../img/Choosing_shampoo.png';
+import Cosmetic_noveltie_of_korea from '../img/Cosmetic_noveltie_of_Korea.png';
+import Deodorants_for_summer from '../img/Deodorants_for_summer.png';
+import Holiday_gift_sets from '../img/Holiday_gift_sets.png';
+
 const carouselImages = [
   { src: news1, alt: 'Шампуні - Акція' },
   { src: news2, alt: 'Креми - Новинки' },
@@ -28,7 +33,15 @@ const carouselImages = [
   { src: news10, alt: 'Скраби - Акція' },
 ];
 
-const SLIDE_WIDTH = 159;
+// Map blog post IDs to images for consistency
+const blogImages = {
+  1: Deodorants_for_summer,
+  2: Cosmetic_noveltie_of_korea,
+  3: Choosing_shampoo,
+  4: Holiday_gift_sets,
+};
+
+const SLIDE_WIDTH = 140;
 const EXTEND_FACTOR = 3;
 
 const groups = [
@@ -42,6 +55,33 @@ const groups = [
   { id: 'perfumery', name: 'Парфумерія' },
   { id: 'accessories', name: 'Аксесуари' },
   { id: 'gift-sets', name: 'Набори/Подарунки' },
+];
+
+const blogPosts = [
+  {
+    id: 1,
+    title: 'Топ 5 дезодорантів на літо',
+    description: 'Відкрийте для себе найкращі дезодоранти, які забезпечують свіжість і комфорт у спекотні літні дні. Ці продукти ефективно борються з потом і неприємним запахом, забезпечуючи тривалий захист. Дізнайтесь, які бренди лідирують за відгуками користувачів. Ми також розповімо, як обрати дезодорант залежно від вашого типу шкіри.',
+    link: '/blog/top-5-deodorants-summer'
+  },
+  {
+    id: 2,
+    title: 'Новинки корейської косметики',
+    description: 'Огляд останніх трендів та продуктів від провідних корейських брендів для вашої шкіри. Від інноваційних сироваток до зволожуючих масок – дізнайтесь, що нового на ринку. Ми також поділимося порадами, як інтегрувати ці продукти у ваш щоденний догляд. Корейська косметика продовжує вражати своєю якістю та ефективністю!',
+    link: '/blog/korean-cosmetics-news'
+  },
+  {
+    id: 3,
+    title: 'Як вибрати шампунь для вашого типу волосся',
+    description: 'Поради експертів щодо вибору ідеального шампуню для здоров’я та краси вашого волосся. Дізнайтесь, які інгредієнти підходять для сухого, жирного чи пошкодженого волосся. Ми також розглянемо популярні бренди та їхні продукти. Правильний шампунь може значно покращити стан вашого волосся!',
+    link: '/blog/choose-shampoo'
+  },
+  {
+    id: 4,
+    title: 'Подарункові набори до свят',
+    description: 'Ідеї подарунків для ваших близьких: косметичні набори, які точно сподобаються. Відкрийте для себе універсальні комплекти для догляду за шкірою та волоссям. Ми підкажемо, як вибрати набір залежно від вподобань одержувача. Подаруйте красу та турботу цього святкового сезону!',
+    link: '/blog/gift-sets-holidays'
+  },
 ];
 
 function CategoryList() {
@@ -95,7 +135,11 @@ function CategoryList() {
           }
         });
         console.log('Recommended Products API Response:', response.data);
-        setRecommendedProducts(response.data.products);
+        const productsWithDescriptions = response.data.products.map(product => ({
+          ...product,
+          description: product.description || 'Якісний продукт для вашого догляду.'
+        }));
+        setRecommendedProducts(productsWithDescriptions);
       } catch (err) {
         console.error('Помилка завантаження рекомендованих продуктів:', err);
         setError('Не вдалося завантажити рекомендовані продукти.');
@@ -350,43 +394,7 @@ function CategoryList() {
               ))}
             </div>
           </div>
-          <div className="companies-carousel animate-companies">
-            <h2 className="companies-header">Компанії, з якими ми працюємо</h2>
-            <div className="companies-wrapper">
-              <button className="companies-nav prev" onClick={goToPrevCompanySlide}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M15 18L9 12L15 6" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              <div className="companies-viewport">
-                <div
-                  className={`companies-inner ${!isCompanyTransitioning ? 'no-transition' : ''}`}
-                  style={{ transform: `translateX(-${currentCompanySlide * SLIDE_WIDTH}px)` }}
-                >
-                  {extendedStores.map((store, index) => (
-                    <div key={`${store.id}-${index}`} className="company-slide">
-                      <a href={store.link || '#'} target="_blank" rel="noopener noreferrer">
-                        <img
-                          src={store.logo || '/img/placeholder.webp'}
-                          alt={store.name}
-                          className="company-logo"
-                          onError={(e) => {
-                            console.log(`Помилка завантаження логотипу: ${store.logo}`);
-                            e.target.src = '/img/placeholder.webp';
-                          }}
-                        />
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <button className="companies-nav next" onClick={goToNextCompanySlide}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 18L15 12L9 6" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            </div>
-          </div>
+          <h2 className="blog-header">Блог</h2>
         </div>
         <div className="recommended-products animate-recommended">
           <div className="recommended-header">Рекомендації</div>
@@ -411,6 +419,7 @@ function CategoryList() {
                   <div className="infinite-recommended-details">
                     <Link to={`/product/${product.id}`} className="infinite-recommended-link">
                       <h3 className="infinite-recommended-name">{product.name}</h3>
+                      <p className="infinite-recommended-description">{product.description}</p>
                     </Link>
                     <div className="infinite-recommended-rating">
                       {renderStars(product.rating || 0)}
@@ -438,6 +447,72 @@ function CategoryList() {
               />
             ))}
           </div>
+        </div>
+      </div>
+      <div className="blog-section">
+        <div className="blog-posts">
+          {blogPosts.map(post => (
+            <div key={post.id} className="blog-post">
+              <img
+                src={blogImages[post.id] || '/img/placeholder.webp'}
+                alt={post.title}
+                className="blog-post-image"
+                onError={(e) => {
+                  console.log(`Помилка завантаження зображення блогу: ${blogImages[post.id]}`);
+                  e.target.src = '/img/placeholder.webp';
+                }}
+              />
+              <div className="blog-post-title-block">
+                <h3 className="blog-post-title">{post.title}</h3>
+              </div>
+              <div className="blog-post-description-block">
+                <p className="blog-post-description">{post.description}</p>
+                <Link to={post.link} className="blog-post-button">Далі</Link>
+              </div>
+            </div>
+          ))}
+          <Link to="/blog" className="blog-post read-all">
+            <div className="blog-post-title-block">
+              <h3 className="blog-post-title">Читати увесь блог</h3>
+            </div>
+          </Link>
+        </div>
+      </div>
+      <div className="companies-carousel animate-companies">
+        <h2 className="companies-header">Компанії, з якими ми працюємо</h2>
+        <div className="companies-wrapper">
+          <button className="companies-nav prev" onClick={goToPrevCompanySlide}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M15 18L9 12L15 6" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <div className="companies-viewport">
+            <div
+              className={`companies-inner ${!isCompanyTransitioning ? 'no-transition' : ''}`}
+              style={{ transform: `translateX(-${currentCompanySlide * SLIDE_WIDTH}px)` }}
+            >
+              {extendedStores.map((store, index) => (
+                <div key={`${store.id}-${index}`} className="company-slide">
+                  <a href={store.link || '#'} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={store.logo || '/img/placeholder.webp'}
+                      alt={store.name}
+                      className="company-logo"
+                      onError={(e) => {
+                        console.log(`Помилка завантаження логотипу: ${store.logo}`);
+                        e.target.src = '/img/placeholder.webp';
+                      }}
+                    />
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+          <button className="companies-nav next" onClick={goToNextCompanySlide}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18L15 12L9 6" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
