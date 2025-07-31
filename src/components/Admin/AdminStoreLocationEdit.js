@@ -36,7 +36,7 @@ function AdminStoreLocationEdit() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); // Стан для модального вікна видалення
   const [mapCenter, setMapCenter] = useState([50.4501, 30.5234]); // Київ за замовчуванням
   const [mapZoom, setMapZoom] = useState(13);
 
@@ -67,7 +67,7 @@ function AdminStoreLocationEdit() {
           status: err.response?.status,
           data: err.response?.data,
         });
-        setLocations([]);
+        setLocations([]); // Встановлюємо порожній масив для обходу помилки 404
         setError('Локації відсутні або сервер недоступний.');
       }
     };
@@ -108,6 +108,7 @@ function AdminStoreLocationEdit() {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
           });
           const locationData = response.data;
+          // Розбиваємо address на street, house, postal_code
           const addressParts = locationData.address.split(', ');
           const street = addressParts[1] || '';
           const house = addressParts[2] || '';
@@ -716,22 +717,8 @@ function AdminStoreLocationEdit() {
         </button>
       </form>
       {isDeleteModalOpen && (
-        <div
-          className="modal-overlay"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            zIndex: 10000,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <div className="delete-modal" style={{ zIndex: 10001 }}>
+        <div className="modal-overlay">
+          <div className="delete-modal">
             <p>Ви точно хочете видалити цю локацію "{displayAddress}"?</p>
             {error && <div className="modal-error">{error}</div>}
             <div className="modal-buttons">

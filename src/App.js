@@ -17,7 +17,8 @@ import AdminBrandCreate from './components/Admin/AdminBrandCreate';
 import AdminBrandEdit from './components/Admin/AdminBrandEdit';
 import AdminStoreCreate from './components/Admin/AdminStoreCreate';
 import AdminStoreEdit from './components/Admin/AdminStoreEdit';
-import AdminStoreLocation from './components/Admin/AdminStoreLocation';
+import AdminStoreLocationCreate from './components/Admin/AdminStoreLocationCreate';
+import AdminStoreLocationEdit from './components/Admin/AdminStoreLocationEdit';
 import { DragDropProvider } from './DragDropSetup';
 import { ErrorProvider } from './components/ErrorContext';
 import ErrorBoundary from './ErrorBoundary';
@@ -52,7 +53,8 @@ function App() {
                     <Route path="/admin/store-edit" element={<AdminStoreEdit />} />
                     <Route path="/admin/product-create" element={<AdminProductCreate />} />
                     <Route path="/admin/product-edit" element={<AdminProductEdit />} />
-                    <Route path="/admin/store-location" element={<AdminStoreLocation />} />
+                    <Route path="/admin/store-location-create" element={<AdminStoreLocationCreate />} />
+                    <Route path="/admin/store-location-edit" element={<AdminStoreLocationEdit />} />
                   </Route>
                 </Routes>
               </ErrorBoundary>

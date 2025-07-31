@@ -839,6 +839,10 @@
   width: 100%;
 }
 
+.address-form {
+   z-index: 1000;
+}
+
 .address-group input {
   flex: 1;
   min-width: 0;
@@ -866,7 +870,7 @@
   max-height: 200px;
   overflow-y: auto;
   width: 100%;
-  z-index: 5000; /* Значно вищий z-index для підказок */
+  z-index: 1000; /* Значно вищий z-index для підказок */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   top: calc(100% + 2px); /* Позиціонування під полем введення */
   left: 0;

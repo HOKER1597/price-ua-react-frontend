@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import _ from 'lodash';
 import './AdminProductEdit.css';
-import '../Wishlist.css'; // Імпортуємо Wishlist.css для стилів модального вікна
+import _ from 'lodash';
 
 function MapController({ center, zoom }) {
   const map = useMap();
@@ -14,69 +12,40 @@ function MapController({ center, zoom }) {
   return null;
 }
 
-function AdminStoreLocationEdit() {
-  const [locations, setLocations] = useState([]);
+function AdminStoreLocation() {
   const [stores, setStores] = useState([]);
   const [cities, setCities] = useState([]);
-  const [selectedLocationId, setSelectedLocationId] = useState('');
   const [formData, setFormData] = useState({
     store_id: '',
     city_id: '',
     street: '',
     house: '',
     postal_code: '',
-    latitude: null,
-    longitude: null,
     hours_mon_fri: '',
     hours_sat: '',
     hours_sun: '',
+    latitude: null,
+    longitude: null,
   });
   const [streetSuggestions, setStreetSuggestions] = useState([]);
   const [houseSuggestions, setHouseSuggestions] = useState([]);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [mapCenter, setMapCenter] = useState([50.4501, 30.5234]); // Київ за замовчуванням
-  const [mapZoom, setMapZoom] = useState(13);
+  const [mapZoom, setMapZoom] = useState(13); // Початковий zoom
 
-  const location = useLocation();
-  const GEOAPIFY_API_KEY = '324aff0bdde84e2bac50eced8f04c147'; // Замініть на ваш ключ Geoapify
+  // Geoapify API key
+  const GEOAPIFY_API_KEY = '324aff0bdde84e2bac50eced8f04c147'; 
+  // OpenCage API key (розкоментуйте після отримання ключа)
+  //const OPENCAGE_API_KEY = '8c302283aa794b6a8ea25109d77ef895'; 
 
-  // Отримання locationId з URL
+  // Завантаження магазинів і міст
   useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-    const locationIdFromQuery = queryParams.get('locationId');
-    if (locationIdFromQuery) {
-      setSelectedLocationId(locationIdFromQuery);
-    }
-  }, [location]);
-
-  // Завантаження локацій, магазинів і міст
-  useEffect(() => {
-    const fetchLocations = async () => {
-      try {
-        const response = await axios.get('https://price-ua-react-backend.onrender.com/admin/store-locations', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        });
-        setLocations(response.data.sort((a, b) => a.address.localeCompare(b.address)));
-        console.log('[fetchLocations] Локації отримано:', response.data);
-      } catch (err) {
-        console.error('Помилка завантаження локацій:', {
-          message: err.message,
-          status: err.response?.status,
-          data: err.response?.data,
-        });
-        setLocations([]);
-        setError('Локації відсутні або сервер недоступний.');
-      }
-    };
-
     const fetchStores = async () => {
       try {
         const response = await axios.get('https://price-ua-react-backend.onrender.com/stores');
         setStores(response.data.sort((a, b) => a.name.localeCompare(b.name)));
-        console.log('[fetchStores] Магазини отримано:', response.data);
       } catch (err) {
         console.error('Помилка завантаження магазинів:', err);
         setError('Не вдалося завантажити магазини.');
@@ -87,92 +56,20 @@ function AdminStoreLocationEdit() {
       try {
         const response = await axios.get('https://price-ua-react-backend.onrender.com/cities');
         setCities(response.data.sort((a, b) => a.name_ua.localeCompare(b.name_ua)));
-        console.log('[fetchCities] Міста отримано:', response.data);
       } catch (err) {
         console.error('Помилка завантаження міст:', err);
         setError('Не вдалося завантажити міста.');
       }
     };
 
-    fetchLocations();
     fetchStores();
     fetchCities();
   }, []);
 
-  // Завантаження деталей локації при виборі locationId
-  useEffect(() => {
-    if (selectedLocationId) {
-      const fetchLocationDetails = async () => {
-        try {
-          const response = await axios.get(`https://price-ua-react-backend.onrender.com/admin/store-location/${selectedLocationId}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-          });
-          const locationData = response.data;
-          const addressParts = locationData.address.split(', ');
-          const street = addressParts[1] || '';
-          const house = addressParts[2] || '';
-          const postal_code = addressParts[3] || '';
-          setFormData({
-            store_id: locationData.store_id.toString(),
-            city_id: locationData.city_id.toString(),
-            street,
-            house,
-            postal_code,
-            latitude: parseFloat(locationData.latitude),
-            longitude: parseFloat(locationData.longitude),
-            hours_mon_fri: locationData.hours_mon_fri || '',
-            hours_sat: locationData.hours_sat || '',
-            hours_sun: locationData.hours_sun || '',
-          });
-          setMapCenter([parseFloat(locationData.latitude), parseFloat(locationData.longitude)]);
-          setMapZoom(15);
-          console.log('[fetchLocationDetails] Деталі локації отримано:', locationData);
-        } catch (err) {
-          console.error('Помилка завантаження деталей локації:', {
-            message: err.message,
-            status: err.response?.status,
-            data: err.response?.data,
-          });
-          setError('Не вдалося завантажити дані локації.');
-        }
-      };
-      fetchLocationDetails();
-    } else {
-      setFormData({
-        store_id: '',
-        city_id: '',
-        street: '',
-        house: '',
-        postal_code: '',
-        latitude: null,
-        longitude: null,
-        hours_mon_fri: '',
-        hours_sat: '',
-        hours_sun: '',
-      });
-      setMapCenter([50.4501, 30.5234]);
-      setMapZoom(13);
-      setStreetSuggestions([]);
-      setHouseSuggestions([]);
-    }
-  }, [selectedLocationId, cities]);
-
-  // Оновлення центру мапи при зміні міста
-  useEffect(() => {
-    if (formData.city_id && !selectedLocationId) {
-      const city = cities.find((c) => c.id.toString() === formData.city_id);
-      if (city && city.latitude && city.longitude) {
-        setMapCenter([parseFloat(city.latitude), parseFloat(city.longitude)]);
-        setMapZoom(12);
-        console.log('[MapUpdate] Оновлено центр мапи для міста:', city.name_ua);
-      }
-    }
-  }, [formData.city_id, cities]);
-
   // Завантаження останніх годин роботи при зміні store_id або city_id
   useEffect(() => {
     const fetchLastStoreHours = async () => {
-      if (formData.store_id && formData.city_id && !selectedLocationId) {
+      if (formData.store_id && formData.city_id) {
         console.log('[Last Hours] Fetching hours for:', { store_id: formData.store_id, city_id: formData.city_id });
         try {
           const response = await axios.get('https://price-ua-react-backend.onrender.com/admin/store-location/last-hours', {
@@ -192,6 +89,7 @@ function AdminStoreLocationEdit() {
             status: err.response?.status,
             data: err.response?.data,
           });
+          // Якщо локація не знайдена, очищаємо поля годин
           setFormData((prev) => ({
             ...prev,
             hours_mon_fri: '',
@@ -203,17 +101,29 @@ function AdminStoreLocationEdit() {
     };
 
     fetchLastStoreHours();
-  }, [formData.store_id, formData.city_id, selectedLocationId]);
+  }, [formData.store_id, formData.city_id]);
+
+  // Оновлення центру мапи при зміні міста
+  useEffect(() => {
+    if (formData.city_id) {
+      const city = cities.find((c) => c.id.toString() === formData.city_id);
+      if (city && city.latitude && city.longitude) {
+        setMapCenter([parseFloat(city.latitude), parseFloat(city.longitude)]);
+        setMapZoom(12);
+      }
+    }
+  }, [formData.city_id, cities]);
 
   // Debounced street search function
   const debouncedStreetSearch = _.debounce(async (value, city) => {
     console.log(`[Street Search] Debounced request for query: ${value}, City: ${city.name_ua}`);
     try {
+      // Try Geoapify first
       let response = await axios.get('https://api.geoapify.com/v1/geocode/autocomplete', {
         params: {
           text: `вулиця ${value}`,
-          filter: 'rect:30.3,50.3,30.7,50.6',
-          bias: `proximity:${city.longitude},${city.latitude}`,
+          filter: 'rect:30.3,50.3,30.7,50.6', // Координати Києва
+          bias: `proximity:${city.longitude},${city.latitude}`, // Пріоритет результатів біля міста
           type: 'street',
           lang: 'uk',
           apiKey: GEOAPIFY_API_KEY,
@@ -241,6 +151,7 @@ function AdminStoreLocationEdit() {
           isCityKyiv: item.properties.city === city.name_ua,
         }));
 
+      // Унікалізація вулиць за назвою, надаючи пріоритет записам із City: Київ
       streets = _.uniqBy(streets, 'name').sort((a, b) => {
         if (a.isCityKyiv && !b.isCityKyiv) return -1;
         if (!a.isCityKyiv && b.isCityKyiv) return 1;
@@ -248,6 +159,7 @@ function AdminStoreLocationEdit() {
       });
       console.log('[Street Search] Unique Streets:', streets);
 
+      // Fallback to Nominatim if Geoapify returns no results
       if (streets.length === 0) {
         console.log('[Street Search] No results with Geoapify, falling back to Nominatim');
         response = await axios.get('https://nominatim.openstreetmap.org/search', {
@@ -288,6 +200,11 @@ function AdminStoreLocationEdit() {
         console.log('[Street Search] Unique Nominatim Streets:', streets);
       }
 
+      console.log('[Street Search] Final Filtered Streets:', streets);
+      const hasStecenka = response.data.features
+        ? response.data.features.some((item) => item.properties.street && item.properties.street.includes('Стеценка'))
+        : response.data.some((item) => item.address.road && item.address.road.includes('Стеценка'));
+      console.log(`[Street Search] "Стеценка" in response: ${hasStecenka}`);
       setStreetSuggestions(streets);
 
       if (streets.length === 0) {
@@ -351,6 +268,7 @@ function AdminStoreLocationEdit() {
       });
       console.log('[House Search] Unique Nominatim Houses:', houses);
 
+      console.log('[House Search] Final Filtered Houses:', houses);
       setHouseSuggestions(houses);
 
       if (houses.length === 0) {
@@ -366,7 +284,7 @@ function AdminStoreLocationEdit() {
     }
   }, 300);
 
-  const handleInputChange = (e, field) => {
+  const handleInputChange = async (e, field) => {
     const { value } = e.target;
     console.log(`[handleInputChange] Field: ${field}, Value: ${value}`);
     setFormData({ ...formData, [field]: value });
@@ -430,10 +348,6 @@ function AdminStoreLocationEdit() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedLocationId) {
-      setError('Виберіть локацію для редагування.');
-      return;
-    }
     setIsLoading(true);
     setError(null);
     setSuccess(null);
@@ -449,8 +363,8 @@ function AdminStoreLocationEdit() {
     const address = `${city.name_ua}, ${formData.street}, ${formData.house}, ${formData.postal_code}`;
 
     try {
-      await axios.put(
-        `https://price-ua-react-backend.onrender.com/admin/store-location/${selectedLocationId}`,
+      await axios.post(
+        'https://price-ua-react-backend.onrender.com/admin/store-location',
         {
           store_id: formData.store_id,
           city_id: formData.city_id,
@@ -467,101 +381,36 @@ function AdminStoreLocationEdit() {
           },
         }
       );
-      setSuccess('Локацію магазину успішно оновлено!');
-    } catch (err) {
-      console.error('Помилка оновлення локації:', {
-        message: err.message,
-        status: err.response?.status,
-        data: err.response?.data,
-      });
-      setError(err.response?.data?.error || 'Не вдалося оновити локацію. Перевірте дані або підключення до сервера.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleOpenDeleteModal = () => {
-    if (!selectedLocationId) {
-      setError('Виберіть локацію для видалення.');
-      return;
-    }
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleCloseDeleteModal = () => {
-    setIsDeleteModalOpen(false);
-    setError(null);
-  };
-
-  const handleDelete = async () => {
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    const token = localStorage.getItem('token');
-    try {
-      await axios.delete(`https://price-ua-react-backend.onrender.com/admin/store-location/${selectedLocationId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setSuccess('Локацію магазину успішно видалено!');
-      setSelectedLocationId('');
+      setSuccess('Локацію магазину успішно додано!');
       setFormData({
         store_id: '',
         city_id: '',
         street: '',
         house: '',
         postal_code: '',
-        latitude: null,
-        longitude: null,
         hours_mon_fri: '',
         hours_sat: '',
         hours_sun: '',
+        latitude: null,
+        longitude: null,
       });
       setMapCenter([50.4501, 30.5234]);
       setMapZoom(13);
-      setIsDeleteModalOpen(false);
     } catch (err) {
-      console.error('Помилка видалення локації:', {
-        message: err.message,
-        status: err.response?.status,
-        data: err.response?.data,
-      });
-      setError(err.response?.data?.error || 'Не вдалося видалити локацію. Перевірте підключення до сервера.');
+      console.error('Помилка додавання локації:', err);
+      setError(err.response?.data?.error || 'Не вдалося додати локацію. Перевірте дані або підключення до сервера.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Обчислення адреси для модального вікна
-  const city = cities.find((c) => c.id.toString() === formData.city_id);
-  const displayAddress = city && formData.street && formData.house && formData.postal_code
-    ? `${city.name_ua}, ${formData.street}, ${formData.house}, ${formData.postal_code}`
-    : 'Вибрана локація';
-
   return (
     <div className="admin-product-edit animate-page">
-      <h2 className="centered-heading">Редагувати локацію магазину</h2>
+      <h2 className="centered-heading">Додати локацію магазину</h2>
       <form onSubmit={handleSubmit}>
-        <div className="form-group animate-field">
-          <label>Локація</label>
-          <select
-            value={selectedLocationId}
-            onChange={(e) => setSelectedLocationId(e.target.value)}
-          >
-            <option value="">Виберіть локацію</option>
-            {locations.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.address} (ID: {location.id})
-              </option>
-            ))}
-          </select>
-        </div>
         <div className="form-group animate-field">
           <label>Магазин</label>
           <select
-            name="store_id"
             value={formData.store_id}
             onChange={(e) => handleInputChange(e, 'store_id')}
             required
@@ -579,7 +428,6 @@ function AdminStoreLocationEdit() {
         <div className="form-group animate-field">
           <label>Місто</label>
           <select
-            name="city_id"
             value={formData.city_id}
             onChange={(e) => handleInputChange(e, 'city_id')}
             required
@@ -600,7 +448,6 @@ function AdminStoreLocationEdit() {
             <div className="input-container">
               <input
                 type="text"
-                name="street"
                 value={formData.street}
                 onChange={(e) => handleInputChange(e, 'street')}
                 placeholder="Вулиця"
@@ -623,7 +470,6 @@ function AdminStoreLocationEdit() {
             <div className="input-container">
               <input
                 type="text"
-                name="house"
                 value={formData.house}
                 onChange={(e) => handleInputChange(e, 'house')}
                 placeholder="Номер будинку"
@@ -645,7 +491,6 @@ function AdminStoreLocationEdit() {
             </div>
             <input
               type="text"
-              name="postal_code"
               value={formData.postal_code}
               onChange={(e) => handleInputChange(e, 'postal_code')}
               placeholder="Поштовий індекс"
@@ -674,7 +519,6 @@ function AdminStoreLocationEdit() {
           <label>Час роботи (ПН-ПТ)</label>
           <input
             type="text"
-            name="hours_mon_fri"
             value={formData.hours_mon_fri}
             onChange={(e) => handleInputChange(e, 'hours_mon_fri')}
             placeholder="Напр. 09:00-18:00"
@@ -684,7 +528,6 @@ function AdminStoreLocationEdit() {
           <label>Час роботи (СБ)</label>
           <input
             type="text"
-            name="hours_sat"
             value={formData.hours_sat}
             onChange={(e) => handleInputChange(e, 'hours_sat')}
             placeholder="Напр. 10:00-16:00"
@@ -694,7 +537,6 @@ function AdminStoreLocationEdit() {
           <label>Час роботи (НД)</label>
           <input
             type="text"
-            name="hours_sun"
             value={formData.hours_sun}
             onChange={(e) => handleInputChange(e, 'hours_sun')}
             placeholder="Напр. вихідний"
@@ -702,47 +544,12 @@ function AdminStoreLocationEdit() {
         </div>
         {error && <div className="error-message centered-message">{error}</div>}
         {success && <div className="success-message centered-message">{success}</div>}
-        <button type="submit" className="save-button animate-field" disabled={isLoading || !selectedLocationId}>
-          {isLoading ? 'Збереження...' : 'Зберегти'}
-        </button>
-        <button
-          type="button"
-          className="save-button animate-field"
-          style={{ backgroundColor: '#ff6f61', marginTop: '10px' }}
-          onClick={handleOpenDeleteModal}
-          disabled={!selectedLocationId}
-        >
-          Видалити
+        <button type="submit" className="save-button animate-field" disabled={isLoading}>
+          {isLoading ? 'Збереження...' : 'Зберегти локацію'}
         </button>
       </form>
-      {isDeleteModalOpen && (
-        <div
-          className="modal-overlay"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            zIndex: 10000,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <div className="delete-modal" style={{ zIndex: 10001 }}>
-            <p>Ви точно хочете видалити цю локацію "{displayAddress}"?</p>
-            {error && <div className="modal-error">{error}</div>}
-            <div className="modal-buttons">
-              <button className="wishlist-modal-confirm-delete-btn" onClick={handleDelete}>Так</button>
-              <button className="wishlist-modal-cancel-btn" onClick={handleCloseDeleteModal}>Ні</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-export default AdminStoreLocationEdit;
+export default AdminStoreLocation;

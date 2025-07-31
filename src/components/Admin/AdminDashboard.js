@@ -64,6 +64,12 @@ function AdminDashboard() {
         <Link to="/admin/product-edit" className="admin-button">
           Редагувати товар
         </Link>
+        <Link to="/admin/store-location-create" className="admin-button">
+          Додати локацію магазину
+        </Link>
+        <Link to="/admin/store-location-edit" className="admin-button">
+          Редагувати локацію магазину
+        </Link>
       </div>
     </div>
   );
