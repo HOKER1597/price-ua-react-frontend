@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { createPortal } from 'react-dom';
 import _ from 'lodash';
 import './AdminProductEdit.css';
-import '../Wishlist.css'; // Імпортуємо Wishlist.css для стилів модального вікна
+import '../Wishlist.css';
 
 function MapController({ center, zoom }) {
   const map = useMap();
@@ -36,12 +37,24 @@ function AdminStoreLocationEdit() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); // Стан для модального вікна видалення
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [mapCenter, setMapCenter] = useState([50.4501, 30.5234]); // Київ за замовчуванням
   const [mapZoom, setMapZoom] = useState(13);
 
   const location = useLocation();
-  const GEOAPIFY_API_KEY = '324aff0bdde84e2bac50eced8f04c147'; // Замініть на ваш ключ Geoapify
+  const GEOAPIFY_API_KEY = '324aff0bdde84e2bac50eced8f04c147';
+
+  // Toggle body overflow when modal is open/closed
+  useEffect(() => {
+    if (isDeleteModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isDeleteModalOpen]);
 
   // Отримання locationId з URL
   useEffect(() => {
@@ -67,7 +80,7 @@ function AdminStoreLocationEdit() {
           status: err.response?.status,
           data: err.response?.data,
         });
-        setLocations([]); // Встановлюємо порожній масив для обходу помилки 404
+        setLocations([]);
         setError('Локації відсутні або сервер недоступний.');
       }
     };
@@ -108,7 +121,6 @@ function AdminStoreLocationEdit() {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
           });
           const locationData = response.data;
-          // Розбиваємо address на street, house, postal_code
           const addressParts = locationData.address.split(', ');
           const street = addressParts[1] || '';
           const house = addressParts[2] || '';
@@ -168,7 +180,7 @@ function AdminStoreLocationEdit() {
         console.log('[MapUpdate] Оновлено центр мапи для міста:', city.name_ua);
       }
     }
-  }, [formData.city_id, cities]);
+  }, [formData.city_id, cities, selectedLocationId]);
 
   // Завантаження останніх годин роботи при зміні store_id або city_id
   useEffect(() => {
@@ -541,6 +553,37 @@ function AdminStoreLocationEdit() {
     ? `${city.name_ua}, ${formData.street}, ${formData.house}, ${formData.postal_code}`
     : 'Вибрана локація';
 
+  // Modal component for portal
+  const DeleteModal = () => (
+    <div
+      className="modal-overlay"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 10000,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        border: '2px solid red', // Temporary border for debugging
+      }}
+    >
+      <div className="delete-modal" style={{ zIndex: 10001 }}>
+        <p>Ви точно хочете видалити цю локацію "{displayAddress}"?</p>
+        {error && <div className="modal-error">{error}</div>}
+        <div className="modal-buttons">
+          <button className="wishlist-modal-confirm-delete-btn" onClick={handleDelete}>Так</button>
+          <button className="wishlist-modal-cancel-btn" onClick={handleCloseDeleteModal}>Ні</button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="admin-product-edit animate-page">
       <h2 className="centered-heading">Редагувати локацію магазину</h2>
@@ -716,18 +759,7 @@ function AdminStoreLocationEdit() {
           Видалити
         </button>
       </form>
-      {isDeleteModalOpen && (
-        <div className="modal-overlay">
-          <div className="delete-modal">
-            <p>Ви точно хочете видалити цю локацію "{displayAddress}"?</p>
-            {error && <div className="modal-error">{error}</div>}
-            <div className="modal-buttons">
-              <button className="wishlist-modal-confirm-delete-btn" onClick={handleDelete}>Так</button>
-              <button className="wishlist-modal-cancel-btn" onClick={handleCloseDeleteModal}>Ні</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {isDeleteModalOpen && createPortal(<DeleteModal />, document.body)}
     </div>
   );
 }
