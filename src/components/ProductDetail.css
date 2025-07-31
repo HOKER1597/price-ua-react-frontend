@@ -430,15 +430,8 @@
   animation: mapFadeIn 0.6s ease-out forwards;
 }
 
-@keyframes mapFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+.fullscreen-map-modal.dimmed {
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
 .fullscreen-map-content {
@@ -471,8 +464,8 @@
 }
 
 .filter-panel h3 {
-  font-size: 18px;
-  color: #fff;
+  font-size: 22px;
+  color: #333;
   margin-bottom: 15px;
 }
 
@@ -595,6 +588,126 @@
 
 .city-item:hover {
   background-color: #f0f0f0;
+}
+
+.store-details-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 300px;
+  height: 640px;
+  background-color: #ff69b4;
+  padding: 20px;
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.2); /* Increased shadow for better visibility */
+  z-index: 1002;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  animation: slideInPanel 0.3s ease-out forwards;
+}
+
+@keyframes slideInPanel {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.store-details-panel.closing {
+  animation: slideOutPanel 0.3s ease-out forwards;
+}
+
+@keyframes slideOutPanel {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.close-store-panel {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  z-index: 1003;
+  transition: background-color 0.3s ease;
+}
+
+.close-store-panel:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.store-details-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.store-details-content .store-name-logo {
+  display: flex;
+  align-items: center; /* Align logo and name horizontally */
+  gap: 10px; /* Space between logo and name */
+}
+
+.store-details-content .store-name{
+  font-size: 22px;
+  margin: 0;
+  color: #333;
+}
+
+.store-details-content .store-logo {
+  width: 80px; /* Reduced size for better alignment */
+  height: 80px;
+  object-fit: contain;
+}
+
+.store-address,
+.store-hours {
+  font-size: 16px;
+  color: #333;
+  margin: 0 0 5px;
+}
+
+.store-details-content .store-price-buy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 10px;
+}
+
+.store-details-content .store-price {
+  font-size: 16px;
+  color: #333;
+  font-weight: bold;
+  margin: 0 0 10px;
+}
+
+.store-details-content .buy-button {
+  padding: 8px 16px;
+  background-color: #0288d1;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.store-details-content .buy-button:hover {
+  background-color: #0277bd;
 }
 
 .volume {
