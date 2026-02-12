@@ -1,0 +1,208 @@
+.account-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 60px);
+  background: linear-gradient(to bottom, #fefcf3, #f5f0eb);
+  padding: 20px;
+}
+
+.dark .account-page {
+  background: linear-gradient(to bottom, #141210, #1a1714);
+}
+
+.account-container {
+  background: #fffdf7;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(28, 25, 23, 0.08);
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.dark .account-container {
+  background: #1e1c19;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.account-container.animate {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.account-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.account-avatar {
+  flex-shrink: 0;
+  position: relative;
+  cursor: pointer;
+}
+
+.account-avatar-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e8e0d4;
+}
+
+.dark .account-avatar-img {
+  border-color: #2e2a25;
+}
+
+.account-avatar-svg {
+  cursor: pointer;
+}
+
+.account-nickname {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1c1917;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.dark .account-nickname {
+  color: #f5f0eb;
+}
+
+.account-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.account-label {
+  font-size: 14px;
+  color: rgba(28, 25, 23, 0.7);
+  margin-bottom: 5px;
+  display: block;
+}
+
+.dark .account-label {
+  color: rgba(245, 240, 235, 0.7);
+}
+
+.account-input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #e8e0d4;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  box-sizing: border-box;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dark .account-input {
+  background: #141210;
+  border-color: #2e2a25;
+  color: #f5f0eb;
+}
+
+.account-input:focus {
+  border-color: #dda15e;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(221, 161, 94, 0.15);
+}
+
+.dark .account-input:focus {
+  border-color: #dda15e;
+  box-shadow: 0 0 0 3px rgba(221, 161, 94, 0.25);
+}
+
+.account-input.field-animate {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Standardize select and date inputs */
+.account-input[type="date"],
+.account-input select {
+  height: 40px;
+  line-height: 40px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path fill="%231c1917" d="M7 10l5 5 5-5z"/></svg>') no-repeat right 10px center;
+  padding-right: 30px;
+}
+
+.dark .account-input[type="date"],
+.dark .account-input select {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path fill="%23f5f0eb" d="M7 10l5 5 5-5z"/></svg>') no-repeat right 10px center;
+  background-color: #141210;
+}
+
+.account-button {
+  width: 100%;
+  padding: 10px;
+  background-color: #C4785A;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.account-button:hover {
+  background-color: #245a42;
+}
+
+.account-button-add-photo {
+  background-color: #dda15e;
+  margin-bottom: 15px;
+}
+
+.account-button-add-photo:hover {
+  background-color: #bc6c25;
+}
+
+.error {
+  color: #c1121f;
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.dark .error {
+  color: #e5534b;
+}
+
+.success {
+  color: #C4785A;
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.dark .success {
+  color: #40916c;
+}
+
+@keyframes fadeInField {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+

@@ -1,0 +1,137 @@
+/*======================
+    Error 404 page
+=======================*/
+
+.error-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 80px);
+  background: #fefcf3;
+  font-family: Georgia, 'Times New Roman', serif;
+  padding: 40px 0;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dark .error-page {
+  background: #141210;
+}
+
+.error-container {
+  width: 100%;
+  max-width: 1200px;
+  padding: 0 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.error-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+}
+
+.error-col {
+  flex: 0 0 100%;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 15px;
+}
+
+.error-content {
+  max-width: 833px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.error-background {
+  background-image: url(https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  height: 400px;
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
+}
+
+.error-background h1 {
+  font-size: 80px;
+  color: #1c1917;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(28, 25, 23, 0.15);
+}
+
+.dark .error-background h1 {
+  color: #f5f0eb;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.error-background h3.error-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: #1c1917;
+  font-family: Georgia, 'Times New Roman', serif;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(28, 25, 23, 0.15);
+}
+
+.dark .error-background h3.error-title {
+  color: #f5f0eb;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.error-message-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.error-message-box p {
+  font-size: 18px;
+  color: rgba(28, 25, 23, 0.6);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  margin-bottom: 20px;
+}
+
+.dark .error-message-box p {
+  color: rgba(245, 240, 235, 0.6);
+}
+
+.error-home-link {
+  color: #fff;
+  padding: 10px 20px;
+  background: #C4785A;
+  margin: 20px 0;
+  display: inline-block;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.error-home-link:hover {
+  background: #245a42;
+}
+
+

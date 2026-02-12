@@ -1,0 +1,13 @@
+.app {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  max-width: 1920px;
+  margin: 0 auto;
+}
+
+.main-content {
+  display: flex;
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: 20px;
+}
+

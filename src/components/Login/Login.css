@@ -1,0 +1,161 @@
+.auth-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 60px);
+  background: linear-gradient(to bottom, #fefcf3, #f5f0eb);
+  padding: 20px;
+}
+
+.dark .auth-page {
+  background: linear-gradient(to bottom, #141210, #1a1714);
+}
+
+.auth-container {
+  background: #fffdf7;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(28, 25, 23, 0.08);
+  width: 100%;
+  max-width: 400px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.dark .auth-container {
+  background: #1e1c19;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.auth-container.animate {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.auth-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #1c1917;
+  font-family: Georgia, 'Times New Roman', serif;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.dark .auth-title {
+  color: #f5f0eb;
+}
+
+.auth-label {
+  font-size: 14px;
+  color: rgba(28, 25, 23, 0.7);
+  margin-bottom: 5px;
+  display: block;
+}
+
+.dark .auth-label {
+  color: rgba(245, 240, 235, 0.7);
+}
+
+.auth-input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #e8e0d4;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  box-sizing: border-box;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dark .auth-input {
+  background: #141210;
+  border-color: #2e2a25;
+  color: #f5f0eb;
+}
+
+.auth-input:focus {
+  border-color: #dda15e;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(221, 161, 94, 0.15);
+}
+
+.dark .auth-input:focus {
+  border-color: #dda15e;
+  box-shadow: 0 0 0 3px rgba(221, 161, 94, 0.25);
+}
+
+.auth-input.field-animate {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.auth-button {
+  width: 100%;
+  padding: 10px;
+  background-color: #C4785A;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.auth-button:hover {
+  background-color: #245a42;
+}
+
+.auth-switch {
+  font-size: 14px;
+  color: #C4785A;
+  text-align: center;
+  margin-top: 10px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.dark .auth-switch {
+  color: #40916c;
+}
+
+.auth-switch a {
+  color: #C4785A;
+  text-decoration: none;
+}
+
+.dark .auth-switch a {
+  color: #40916c;
+}
+
+.auth-switch a:hover {
+  text-decoration: underline;
+}
+
+.error {
+  color: #c1121f;
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.dark .error {
+  color: #e5534b;
+}
+
+@keyframes fadeInField {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
